@@ -47,6 +47,7 @@ SB1_VARS = 0x1000
 SB1_FLAGS = 0x0EE0
 SB1_BAG_ITEMS = 0x0310
 SB2_OPTIONS = 0x14
+SB1_GUNK_DEXNAV = 0x348C  # offsetof(struct SaveBlock1, gunkDexNav)
 SB2_ENCRYPTION_KEY = 0xF20
 
 
@@ -265,14 +266,18 @@ class Features:
         return self.g.u8(self.g.a("gPlayerParty") + slot * 100 + 0x54)
 
     def check_exp_all_battle(self):
-        """A DexNav battle with INSTANT text; the level-1 Bulbasaur in slot 2 never battles and still levels up."""
+        """A DexNav battle with INSTANT text; the Bulbasaur in slot 2 never battles and still gets EXP."""
         g = self.g
         g.cmd(f"write8 {self.sb2() + SB2_OPTIONS} {(g.u8(self.sb2() + SB2_OPTIONS) & ~7) | 3}")
-        before = self.party_level(1)
+        before = self.mon(1)["exp"]
         done = self.finish_battle()
-        after = self.party_level(1)
+        after = self.mon(1)["exp"]
         self.shot("after_battle.png")
-        self.record("exp all", done and after > before, f"slot 2 level {before} -> {after}, back in the field {done}")
+        self.record("exp all", done and after > before, f"slot 2 EXP {before} -> {after}, back in the field {done}")
+        dex = bytes.fromhex(g.cmd(f"read {self.sb1() + SB1_GUNK_DEXNAV} 389")[0].replace(" ", ""))
+        level, chain_species, chain = dex[16 - 1], dex[386] | (dex[387] << 8), dex[388]
+        self.record("dexnav search level", level == 1 and chain_species == 16 and chain == 1,
+                    f"Pidgey search level {level}, chain species {chain_species} x{chain}")
 
     # --- menus ---
     def startmenu(self, option):
