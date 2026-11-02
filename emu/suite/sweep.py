@@ -5,7 +5,7 @@ Usage: py -3 emu/suite/sweep.py <rom.gba> <rom.elf> [first_map_index] [count]
 One new game with a Pikachu is saved, the game is power-cycled to its main menu and a savestate taken there.
 For each map (but the link rooms), the state is loaded, the save block's continue-game warp is pointed at the map's first warp event
 (the game puts the player on it), and CONTINUE is chosen. A map passes when the field comes up within 20 seconds,
-the main loop is still running 3 seconds later, and the follower is out (maps where the game hides it, such as
+the main loop is still running 3 seconds later (a trainer battle on arrival counts), and the follower is out (maps where the game hides it, such as
 ones the player arrives in on water, count as passes with a note). Results: emu/suite/out/<rom>/sweep.txt.
 """
 import json
@@ -15,7 +15,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from features import FLAG_SYS_POKEMON_GET, SPECIES, Features  # noqa: E402
+from features import FLAG_GUNK_ENDLESS_REPEL_ON, FLAG_SYS_POKEMON_GET, SPECIES, Features  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(HERE))
 
@@ -38,7 +38,8 @@ def main():
     count = int(sys.argv[4]) if len(sys.argv) > 4 else 10000
     f = Features(rom, elf)
     g = f.g
-    f.new_game(mons=[(SPECIES["PIKACHU"], 50)], flags=[FLAG_SYS_POKEMON_GET], name="sweep")
+    # level 100 and the Endless Repel on: no wild battle gets in the way (trainers still see the player)
+    f.new_game(mons=[(SPECIES["PIKACHU"], 100)], flags=[FLAG_SYS_POKEMON_GET, FLAG_GUNK_ENDLESS_REPEL_ON], name="sweep")
     g.save()
     g.reboot()
     for _ in range(60):
@@ -55,10 +56,12 @@ def main():
         g.cmd(f"write8 {sb1 + 0xC} {gi}", f"write8 {sb1 + 0xD} {mi}", f"write8 {sb1 + 0xE} 0",
               f"write16 {sb1 + 0x10} 65535", f"write16 {sb1 + 0x12} 65535", f"write8 {sb2 + 9} {g.u8(sb2 + 9) | 1}")
         reached = g.wait_field(press="A", max_steps=60, settle=3)
+        battle = f.in_battle()
         alive = int(g.cmd(f"alive {g.a('gMain') + 0x24} 180")[0].split()[1])
         follower = f.count_follower_objects()
-        ok = reached and alive > 150
-        note = "" if follower == 1 else f" (followers: {follower})"
+        # a trainer who sees the player on arrival starts a battle: the game is running, the map loaded
+        ok = (reached or battle) and alive > 150
+        note = (" (trainer battle)" if battle else "") + ("" if follower == 1 or battle else f" (followers: {follower})")
         line = f"{'PASS' if ok else 'FAIL'} {gi:2}.{mi:<3} {name}: field {reached}, frames {alive}{note}"
         if not ok or follower != 1:
             g.cmd(f"shot {f.path('sweep_' + name + '.png')}")

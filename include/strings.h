@@ -173,6 +173,8 @@ extern const u8 gText_PlayerUsedVar2[];
 extern const u8 gText_RepelEffectsLingered[];
 extern const u8 gText_EndlessRepelOn[];
 extern const u8 gText_GunkMoveTutor[];
+extern const u8 gText_GunkWalk[];
+extern const u8 gText_GunkReturn[];
 extern const u8 gText_EndlessRepelOff[];
 extern const u8 gText_ExpAllOn[];
 extern const u8 gText_ExpAllOff[];

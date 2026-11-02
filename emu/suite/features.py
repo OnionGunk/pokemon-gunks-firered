@@ -636,6 +636,28 @@ class Features:
         near = fp is not None and abs(fp[0] - p[0]) + abs(fp[1] - p[1]) <= 3
         self.record("follower through a door", where == (4, 3) and near, f"map {where}, player {p}, follower {fp}")
 
+    def check_follower_switch(self):
+        """Party menu on the lead: RETURN puts the follower away (and it stays away), WALK brings it back."""
+        g = self.g
+
+        def lead_action(row):
+            self.startmenu(1)
+            g.cmd("wait 40", "press A 4", "wait 40")
+            for _ in range(row):
+                g.cmd("press Down 4", "wait 10")
+            self.shot(f"follower_switch_{row}.png")
+            g.cmd("press A 4", "wait 120")
+            self.back_to_field()
+            g.cmd("wait 60")
+        lead_action(1)  # SUMMARY, RETURN, ...
+        off = self.count_follower_objects()
+        g.cmd("press Left 16", "wait 10", "press Right 16", "wait 40")
+        still_off = self.count_follower_objects()
+        lead_action(1)  # SUMMARY, WALK, ...
+        on = self.count_follower_objects()
+        self.record("follower on/off switch", off == 0 and still_off == 0 and on == 1,
+                    f"follower objects after RETURN {off}, after a walk {still_off}, after WALK {on}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -699,6 +721,7 @@ def main():
         f.check_follower_save_cycle()
         f.warp(3, 0, 16, 15, name="door_warp")
         f.check_follower_door()
+        f.check_follower_switch()
     finally:
         import emu
         emu.stop()

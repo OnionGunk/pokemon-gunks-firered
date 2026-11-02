@@ -25,14 +25,13 @@ suite), both run after every build. Status: **done** = in the build and checked 
 | 16 | Faster egg hatching | An egg cycle every 256 steps | Every 128 steps (`src/daycare.c`) | done | code only; the test hook can't make an egg yet |
 | 17 | More PC boxes | 14 boxes; storage fills its 9 flash sectors | **Skipped**: no room without losing the backup slot; see `docs/PC_BOXES_PLAN.md` | skipped | |
 | 18 | DexNav | — | Key item (slot 54): lists the map's grass Pokémon; the chosen one hides in rustling grass nearby. Normal wild rolls; the search level and chain set how many are rolled (the best is kept). Search data in SaveBlock1's unused 400 bytes | done | "dexnav", "dexnav search level" |
-| 19 | Following Pokémon | — | The lead walks behind the player: all 386 species, shinies in shiny colors. Movement ported from MinimalEffort07/pokefirered; sprites from pokeemerald-expansion | done | "follower", "follower and Surf", "follower across a map edge", "follower through a door", "follower and saving", "follower palette after a menu", "story opening" |
+| 19 | Following Pokémon | — | The lead walks behind the player: all 386 species, shinies in shiny colors. Movement ported from MinimalEffort07/pokefirered; sprites from pokeemerald-expansion. RETURN on the lead's party menu puts it away (flag 0x4AA), WALK brings it back | done | "follower on/off switch", "follower", "follower and Surf", "follower across a map edge", "follower through a door", "follower and saving", "follower palette after a menu", "story opening" |
 
 The three new key items come from Oak's aide in Pewter City with the Running Shoes, or from Mom on a save that is
 already past that ("Pewter aide gives the key items", "Mom gives the key items").
 
 ## Not done yet
 
-- A switch to turn the follower off (its flag, 0x4AA, exists; nothing sets it yet).
 - Talking to the follower does nothing (vanilla would read a garbage script; it is skipped).
 - An emulator check for egg hatching.
 - A whole playthrough: the checks cover the opening, the key-item gifts and each feature, not every story scene.

@@ -10,6 +10,7 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
   is a legal wild roll for that spot. Search levels and chains raise the odds of good IVs and shinies.
 - **Pokémon follow you.** Your lead Pokémon walks behind you, any of the 386 species, shinies in their shiny
   colors. Walk into it to swap places; it waits on the shore while you Surf and hops down ledges after you.
+  RETURN in its party menu puts it away, WALK brings it back.
 - **Faster play:** instant text, a faster EXP bar, auto-run (hold B to walk), eggs that hatch twice as fast.
 - **Items:** reusable TMs, two registered items (SELECT and R), bag sorting (START in the bag), a prompt to use
   another Repel when one runs out, and an Endless Repel you switch on and off.

@@ -346,7 +346,7 @@ void ActivateFollower(u8 partySlot)
  * Gunk's: the follower is the lead, the first party Pokemon that isn't an Egg and still has HP. Called when the
  * field is (re)built and every overworld frame. Returns TRUE when the follower is active afterwards.
  */
-static bool8 SyncFollowerWithLead(void)
+static u8 GetLeadSlot(void)
 {
     u8 i;
 
@@ -357,6 +357,21 @@ static bool8 SyncFollowerWithLead(void)
          && GetMonData(&gPlayerParty[i], MON_DATA_HP) != 0)
             break;
     }
+    return i;
+}
+
+/* Gunk's: the party menu offers WALK on the Pokemon that would follow */
+bool8 Gunk_IsFollowerLead(struct Pokemon *mon)
+{
+    u8 i = GetLeadSlot();
+
+    return i < gPlayerPartyCount && mon == &gPlayerParty[i];
+}
+
+static bool8 SyncFollowerWithLead(void)
+{
+    u8 i = GetLeadSlot();
+
     if (i == gPlayerPartyCount || gQuestLogState == QL_STATE_PLAYBACK || FlagGet(FLAG_GUNK_FOLLOWER_OFF))
     {
         if (sFollower.active)

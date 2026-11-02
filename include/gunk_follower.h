@@ -30,6 +30,7 @@ bool8 CanSpeciesFollowPlayer(u16 species);
 void ActivateFollower(u8 partySlot);
 void DeactivateFollower(void);
 void ClearFollowerFromSaveBlock(void);
+bool8 Gunk_IsFollowerLead(struct Pokemon *mon);
 
 /*
  * Swapping places (issue #99): the player's step code calls

@@ -36,6 +36,7 @@
 #include "metatile_behavior.h"
 #include "overworld.h"
 #include "party_menu.h"
+#include "gunk_follower.h"
 #include "player_pc.h"
 #include "pokedex.h"
 #include "pokemon.h"
@@ -162,6 +163,8 @@ static void CursorCB_Enter(u8 taskId);
 static void CursorCB_NoEntry(u8 taskId);
 static void CursorCB_Store(u8 taskId);
 static void CursorCB_Register(u8 taskId);
+static void CursorCB_GunkWalk(u8 taskId);
+static void CursorCB_GunkReturn(u8 taskId);
 static void CursorCB_Trade1(u8 taskId);
 static void CursorCB_Trade2(u8 taskId);
 static void CursorCB_FieldMove(u8 taskId);
@@ -2977,12 +2980,24 @@ bool8 Gunk_CanUseHMMoveWithoutKnowing(struct Pokemon *mon, u16 move)
 
 static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 {
-    u8 i, j, numFieldMoves = 0;
+    u8 i, j, numFieldMoves = 0, maxFieldMoves = MAX_MON_MOVES;
 
     sPartyMenuInternal->numActions = 0;
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, CURSOR_OPTION_SUMMARY);
+    // Gunk's follower: RETURN on the Pokemon that is following, WALK on the lead while followers are off. The
+    // list holds 8 entries, so a WALK/RETURN entry leaves room for 3 field moves.
+    if (IsFollowerPokemon(&mons[slotId]))
+    {
+        AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, CURSOR_OPTION_GUNK_RETURN);
+        maxFieldMoves--;
+    }
+    else if (FlagGet(FLAG_GUNK_FOLLOWER_OFF) && Gunk_IsFollowerLead(&mons[slotId]))
+    {
+        AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, CURSOR_OPTION_GUNK_WALK);
+        maxFieldMoves--;
+    }
     // Add field moves to action list
-    for (i = 0; i < MAX_MON_MOVES; ++i)
+    for (i = 0; i < MAX_MON_MOVES && numFieldMoves < maxFieldMoves; ++i)
     {
         for (j = 0; sFieldMoves[j] != FIELD_MOVE_END; ++j)
         {
@@ -2995,7 +3010,7 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
         }
     }
     // Gunk's: then the HM moves it could learn from an owned HM, while the menu has room (4 field moves at most)
-    for (j = 0; j <= FIELD_MOVE_WATERFALL && numFieldMoves < MAX_MON_MOVES; ++j)
+    for (j = 0; j <= FIELD_MOVE_WATERFALL && numFieldMoves < maxFieldMoves; ++j)
     {
         if (!MonKnowsMove(&mons[slotId], sFieldMoves[j]) && Gunk_CanUseHMMoveWithoutKnowing(&mons[slotId], sFieldMoves[j]))
         {
@@ -3870,6 +3885,27 @@ static void CursorCB_Store(u8 taskId)
 }
 
 // Register mon for the Trading Board in Union Room
+// Gunk's follower switch (src/gunk_follower.c). The sprite comes and goes as the field is rebuilt.
+static void CursorCB_GunkWalk(u8 taskId)
+{
+    PlaySE(SE_SELECT);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[0]);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[1]);
+    FlagClear(FLAG_GUNK_FOLLOWER_OFF);
+    gPartyMenu.exitCallback = CB2_ReturnToField;
+    Task_ClosePartyMenu(taskId);
+}
+
+static void CursorCB_GunkReturn(u8 taskId)
+{
+    PlaySE(SE_SELECT);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[0]);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[1]);
+    FlagSet(FLAG_GUNK_FOLLOWER_OFF);
+    gPartyMenu.exitCallback = CB2_ReturnToField;
+    Task_ClosePartyMenu(taskId);
+}
+
 static void CursorCB_Register(u8 taskId)
 {
     u16 species2 = GetMonData(&gPlayerParty[gPartyMenu.slotId], MON_DATA_SPECIES_OR_EGG);
