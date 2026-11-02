@@ -602,7 +602,8 @@ static bool8 IsWildLevelAllowedByRepel(u8 wildLevel)
 {
     u8 i;
 
-    if (!VarGet(VAR_REPEL_STEP_COUNT))
+    // Gunk's: the Endless Repel works like a Repel that never wears off
+    if (!VarGet(VAR_REPEL_STEP_COUNT) && !FlagGet(FLAG_GUNK_ENDLESS_REPEL_ON))
         return TRUE;
 
     for (i = 0; i < PARTY_SIZE; i++)

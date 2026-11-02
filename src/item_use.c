@@ -356,6 +356,44 @@ void FieldUseFunc_PowderJar(u8 taskId)
         DisplayItemMessageOnField(taskId, FONT_NORMAL, gStringVar4, Task_ItemUse_CloseMessageBoxAndReturnToField);
 }
 
+// Gunk's: key items that switch an effect on or off, from the bag or as a registered item
+static void ToggleKeyItemFlag(u8 taskId, u16 flag, const u8 *onText, const u8 *offText)
+{
+    const u8 *text;
+
+    if (FlagGet(flag))
+    {
+        FlagClear(flag);
+        text = offText;
+    }
+    else
+    {
+        FlagSet(flag);
+        text = onText;
+    }
+    PlaySE(SE_SELECT);
+    if (gTasks[taskId].data[3] == 0)
+        DisplayItemMessageInBag(taskId, FONT_NORMAL, text, Task_ReturnToBagFromContextMenu);
+    else
+        DisplayItemMessageOnField(taskId, FONT_NORMAL, text, Task_ItemUse_CloseMessageBoxAndReturnToField);
+}
+
+void FieldUseFunc_EndlessRepel(u8 taskId)
+{
+    ToggleKeyItemFlag(taskId, FLAG_GUNK_ENDLESS_REPEL_ON, gText_EndlessRepelOn, gText_EndlessRepelOff);
+}
+
+void FieldUseFunc_ExpAll(u8 taskId)
+{
+    ToggleKeyItemFlag(taskId, FLAG_GUNK_EXP_ALL_ON, gText_ExpAllOn, gText_ExpAllOff);
+}
+
+// Gunk's: special for the Repel prompt (data/scripts/repel.inc), after the script took the Repel from the bag
+void Gunk_RestartRepel(void)
+{
+    VarSet(VAR_REPEL_STEP_COUNT, ItemId_GetHoldEffectParam(VarGet(VAR_GUNK_LAST_REPEL)));
+}
+
 void FieldUseFunc_PokeFlute(u8 taskId)
 {
     bool8 wokeSomeoneUp = FALSE;
@@ -565,6 +603,7 @@ static void Task_UseRepel(u8 taskId)
     {
         ItemUse_SetQuestLogEvent(QL_EVENT_USED_ITEM, NULL, gSpecialVar_ItemId, 0xFFFF);
         VarSet(VAR_REPEL_STEP_COUNT, ItemId_GetHoldEffectParam(gSpecialVar_ItemId));
+        VarSet(VAR_GUNK_LAST_REPEL, gSpecialVar_ItemId); // for the "use another?" prompt when it wears off
         RemoveUsedItem();
         DisplayItemMessageInBag(taskId, FONT_NORMAL, gStringVar4, Task_ReturnToBagFromContextMenu);
     }

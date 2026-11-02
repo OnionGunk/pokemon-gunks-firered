@@ -708,6 +708,7 @@ PewterCity_EventScript_AideGiveRunningShoes::
 	msgbox PewterCity_Text_ExplainRunningShoes
 	normalmsg
 	call EventScript_RestorePrevTextColor
+	call PewterCity_EventScript_GunkAideGivesKeyItems
 	msgbox PewterCity_Text_MustBeGoingBackToLab
 	closemessage
 	call_if_eq VAR_TEMP_1, 0, PewterCity_EventScript_AideExit0

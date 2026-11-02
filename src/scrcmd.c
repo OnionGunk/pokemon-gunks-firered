@@ -1792,6 +1792,22 @@ bool8 ScrCmd_checkpartymove(struct ScriptContext * ctx)
             break;
         }
     }
+    // Gunk's: else the first Pokemon that could learn the move from an HM the player owns
+    if (gSpecialVar_Result == PARTY_SIZE)
+    {
+        for (i = 0; i < PARTY_SIZE; i++)
+        {
+            u16 species = GetMonData(&gPlayerParty[i], MON_DATA_SPECIES, NULL);
+            if (!species)
+                break;
+            if (Gunk_CanUseHMMoveWithoutKnowing(&gPlayerParty[i], moveId))
+            {
+                gSpecialVar_Result = i;
+                gSpecialVar_0x8004 = species;
+                break;
+            }
+        }
+    }
     return FALSE;
 }
 

@@ -3110,6 +3110,15 @@ static void Cmd_jumpiftype(void)
         gBattlescriptCurrInstr += 7;
 }
 
+// Gunk's Exp. All: while it's switched on, healthy party members that didn't battle get half the EXP and the EVs
+static bool32 GetsExpAllShare(u8 partyId)
+{
+    return FlagGet(FLAG_GUNK_EXP_ALL_ON) && CheckBagHasItem(ITEM_EXP_ALL, 1)
+        && GetMonData(&gPlayerParty[partyId], MON_DATA_SPECIES) != SPECIES_NONE
+        && !GetMonData(&gPlayerParty[partyId], MON_DATA_IS_EGG)
+        && GetMonData(&gPlayerParty[partyId], MON_DATA_HP) != 0;
+}
+
 static void Cmd_getexp(void)
 {
     u16 item;
@@ -3198,7 +3207,8 @@ static void Cmd_getexp(void)
             else
                 holdEffect = ItemId_GetHoldEffect(item);
 
-            if (holdEffect != HOLD_EFFECT_EXP_SHARE && !(gBattleStruct->sentInPokes & 1))
+            if (holdEffect != HOLD_EFFECT_EXP_SHARE && !(gBattleStruct->sentInPokes & 1)
+             && !GetsExpAllShare(gBattleStruct->expGetterMonId))
             {
                 *(&gBattleStruct->sentInPokes) >>= 1;
                 gBattleScripting.getexpState = 5;
@@ -3224,6 +3234,8 @@ static void Cmd_getexp(void)
                 {
                     if (gBattleStruct->sentInPokes & 1)
                         gBattleMoveDamage = *exp;
+                    else if (holdEffect != HOLD_EFFECT_EXP_SHARE) // Gunk's Exp. All: half a battler's share
+                        gBattleMoveDamage = *exp / 2 != 0 ? *exp / 2 : 1;
                     else
                         gBattleMoveDamage = 0;
 

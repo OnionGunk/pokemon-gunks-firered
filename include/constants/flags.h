@@ -1222,9 +1222,9 @@
 #define FLAG_HIDDEN_ITEM_SSANNE_EXTERIOR_LAVA_COOKIE                       (FLAG_HIDDEN_ITEMS_START + 190)
 
 // Unused hidden item flags
-#define FLAG_UNUSED_0x4A7               0x4A7 // Unused Flag
-#define FLAG_UNUSED_0x4A8               0x4A8 // Unused Flag
-#define FLAG_UNUSED_0x4A9               0x4A9 // Unused Flag
+#define FLAG_GUNK_ENDLESS_REPEL_ON      0x4A7 // Gunk's: Endless Repel switched on (unused flag in vanilla)
+#define FLAG_GUNK_EXP_ALL_ON            0x4A8 // Gunk's: Exp. All switched on (unused flag in vanilla)
+#define FLAG_GUNK_GOT_KEY_ITEMS         0x4A9 // Gunk's: received the Endless Repel and Exp. All (unused flag in vanilla)
 #define FLAG_UNUSED_0x4AA               0x4AA // Unused Flag
 #define FLAG_UNUSED_0x4AB               0x4AB // Unused Flag
 #define FLAG_UNUSED_0x4AC               0x4AC // Unused Flag

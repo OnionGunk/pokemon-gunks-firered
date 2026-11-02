@@ -242,6 +242,14 @@ struct PokemonSummaryScreenData
 
     u8 ALIGNED(4) lastPageFlipDirection; /* 0x3300 */
     u8 ALIGNED(4) unk3304; /* 0x3304 */
+    u8 gunkStatView; // Gunk's: SKILLS page shows stats, IVs or EVs (A cycles)
+};
+
+enum {
+    GUNK_STAT_VIEW_STATS,
+    GUNK_STAT_VIEW_IVS,
+    GUNK_STAT_VIEW_EVS,
+    GUNK_STAT_VIEW_COUNT
 };
 
 struct Struct203B144
@@ -1181,6 +1189,16 @@ static void Task_InputHandler_Info(u8 taskId)
                 {
                     PlaySE(SE_SELECT);
                     sMonSummaryScreen->state3270 = PSS_STATE3270_ATEXIT_FADEOUT;
+                }
+                else if (sMonSummaryScreen->curPageIndex == PSS_PAGE_SKILLS && !sMonSummaryScreen->isEgg
+                      && !(sMonSummaryScreen->savedCallback == CB2_ReturnToTradeMenuFromSummary && sMonSummaryScreen->isEnemyParty == TRUE))
+                {
+                    // Gunk's: A cycles the SKILLS page between stats, IVs and EVs
+                    PlaySE(SE_SELECT);
+                    sMonSummaryScreen->gunkStatView = (sMonSummaryScreen->gunkStatView + 1) % GUNK_STAT_VIEW_COUNT;
+                    BufferMonSkills();
+                    PokeSum_PrintRightPaneText();
+                    CopyWindowToVram(sMonSummaryScreen->windowIds[POKESUM_WIN_RIGHT_PANE], 2);
                 }
                 else if (sMonSummaryScreen->curPageIndex == PSS_PAGE_MOVES)
                 {
@@ -2148,6 +2166,39 @@ static void BufferMonInfo(void)
 #define GetNumberRightAlign63(x) (63 - StringLength((x)) * 6)
 #define GetNumberRightAlign27(x) (27 - StringLength((x)) * 6)
 
+// Gunk's IV/EV view: the HP row says which one ("IV 31" / "EV 252"), the stat rows show the values
+static void BufferMonIVsOrEVs(void)
+{
+    static const u8 sIVLabel[] = _("IV ");
+    static const u8 sEVLabel[] = _("EV ");
+    static const u8 sIVData[NUM_STATS] = {MON_DATA_HP_IV, MON_DATA_ATK_IV, MON_DATA_DEF_IV, MON_DATA_SPEED_IV, MON_DATA_SPATK_IV, MON_DATA_SPDEF_IV};
+    static const u8 sEVData[NUM_STATS] = {MON_DATA_HP_EV, MON_DATA_ATK_EV, MON_DATA_DEF_EV, MON_DATA_SPEED_EV, MON_DATA_SPATK_EV, MON_DATA_SPDEF_EV};
+    const u8 *data = sMonSummaryScreen->gunkStatView == GUNK_STAT_VIEW_IVS ? sIVData : sEVData;
+    u8 *buf;
+    u8 tempStr[8];
+
+    StringCopy(sMonSummaryScreen->summary.curHpStrBuf, sMonSummaryScreen->gunkStatView == GUNK_STAT_VIEW_IVS ? sIVLabel : sEVLabel);
+    ConvertIntToDecimalStringN(tempStr, GetMonData(&sMonSummaryScreen->currentMon, data[STAT_HP]), STR_CONV_MODE_LEFT_ALIGN, 3);
+    StringAppend(sMonSummaryScreen->summary.curHpStrBuf, tempStr);
+    sMonSkillsPrinterXpos->curHpStr = GetNumberRightAlign63(sMonSummaryScreen->summary.curHpStrBuf);
+
+    buf = sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_ATK];
+    ConvertIntToDecimalStringN(buf, GetMonData(&sMonSummaryScreen->currentMon, data[STAT_ATK]), STR_CONV_MODE_LEFT_ALIGN, 3);
+    sMonSkillsPrinterXpos->atkStr = GetNumberRightAlign27(buf);
+    buf = sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_DEF];
+    ConvertIntToDecimalStringN(buf, GetMonData(&sMonSummaryScreen->currentMon, data[STAT_DEF]), STR_CONV_MODE_LEFT_ALIGN, 3);
+    sMonSkillsPrinterXpos->defStr = GetNumberRightAlign27(buf);
+    buf = sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_SPA];
+    ConvertIntToDecimalStringN(buf, GetMonData(&sMonSummaryScreen->currentMon, data[STAT_SPATK]), STR_CONV_MODE_LEFT_ALIGN, 3);
+    sMonSkillsPrinterXpos->spAStr = GetNumberRightAlign27(buf);
+    buf = sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_SPD];
+    ConvertIntToDecimalStringN(buf, GetMonData(&sMonSummaryScreen->currentMon, data[STAT_SPDEF]), STR_CONV_MODE_LEFT_ALIGN, 3);
+    sMonSkillsPrinterXpos->spDStr = GetNumberRightAlign27(buf);
+    buf = sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_SPE];
+    ConvertIntToDecimalStringN(buf, GetMonData(&sMonSummaryScreen->currentMon, data[STAT_SPEED]), STR_CONV_MODE_LEFT_ALIGN, 3);
+    sMonSkillsPrinterXpos->speStr = GetNumberRightAlign27(buf);
+}
+
 static void BufferMonSkills(void)
 {
     u8 tempStr[20];
@@ -2213,6 +2264,9 @@ static void BufferMonSkills(void)
         ConvertIntToDecimalStringN(sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_SPE], statValue, STR_CONV_MODE_LEFT_ALIGN, 3);
         sMonSkillsPrinterXpos->speStr = GetNumberRightAlign27(sMonSummaryScreen->summary.statValueStrBufs[PSS_STAT_SPE]);
     }
+
+    if (sMonSummaryScreen->gunkStatView != GUNK_STAT_VIEW_STATS)
+        BufferMonIVsOrEVs();
 
     exp = GetMonData(&sMonSummaryScreen->currentMon, MON_DATA_EXP);
     ConvertIntToDecimalStringN(sMonSummaryScreen->summary.expPointsStrBuf, exp, STR_CONV_MODE_LEFT_ALIGN, 7);

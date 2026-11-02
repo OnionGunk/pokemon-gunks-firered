@@ -3,6 +3,8 @@
 #include "decompress.h"
 #include "m4a.h"
 #include "event_data.h"
+#include "overworld.h"
+#include "constants/items.h"
 #include "help_system.h"
 #include "list_menu.h"
 #include "strings.h"
@@ -48,6 +50,9 @@ u8 RunHelpSystemCallback(void)
         if (gSaveBlock2Ptr->optionsButtonMode != OPTIONS_BUTTON_MODE_HELP)
             return 0;
         if (JOY_NEW(R_BUTTON) && gHelpSystemToggleWithRButtonDisabled == TRUE)
+            return 0;
+        // Gunk's: in the field, R belongs to the second registered item when there is one (L still opens Help)
+        if (JOY_NEW(R_BUTTON) && gMain.callback2 == CB2_Overworld && VarGet(VAR_GUNK_REGISTERED_ITEM_2) != ITEM_NONE)
             return 0;
         if (JOY_NEW(L_BUTTON | R_BUTTON))
         {

@@ -120,19 +120,34 @@ void RunTextPrinters(void)
     {
         if (sTextPrinters[i].active)
         {
-            u16 renderCmd = RenderFont(&sTextPrinters[i]);
-            switch (renderCmd)
+            // Gunk's INSTANT text: a full-speed printer keeps rendering until it waits for a button, scrolls or
+            // finishes, then copies the window once (also when it finished, so a message's last letters show).
+            bool32 instant = sTextPrinters[i].textSpeed == 0 && gSaveBlock2Ptr->optionsTextSpeed == OPTIONS_TEXT_SPEED_INSTANT;
+            bool32 printed = FALSE;
+            u16 renderCmd;
+            u16 n = 0;
+
+            do
             {
-            case RENDER_PRINT:
+                renderCmd = RenderFont(&sTextPrinters[i]);
+                switch (renderCmd)
+                {
+                case RENDER_PRINT:
+                    if (instant)
+                        printed = TRUE;
+                    else
+                        CopyWindowToVram(sTextPrinters[i].printerTemplate.windowId, COPYWIN_GFX);
+                case RENDER_UPDATE:
+                    if (sTextPrinters[i].callback != NULL)
+                        sTextPrinters[i].callback(&sTextPrinters[i].printerTemplate, renderCmd);
+                    break;
+                case RENDER_FINISH:
+                    sTextPrinters[i].active = FALSE;
+                    break;
+                }
+            } while (instant && renderCmd == RENDER_PRINT && ++n < 0x400);
+            if (printed)
                 CopyWindowToVram(sTextPrinters[i].printerTemplate.windowId, COPYWIN_GFX);
-            case RENDER_UPDATE:
-                if (sTextPrinters[i].callback != NULL)
-                    sTextPrinters[i].callback(&sTextPrinters[i].printerTemplate, renderCmd);
-                break;
-            case RENDER_FINISH:
-                sTextPrinters[i].active = FALSE;
-                break;
-            }
         }
     }
 }

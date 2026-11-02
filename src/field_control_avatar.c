@@ -294,6 +294,8 @@ int ProcessPlayerFieldInput(struct FieldInput *input)
         gFieldInputRecord.pressedSelectButton = TRUE;
         return TRUE;
     }
+    if (input->pressedRButton && Gunk_UseSecondRegisteredItemOnField() == TRUE)
+        return TRUE;
 
     return FALSE;
 }

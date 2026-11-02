@@ -2960,9 +2960,24 @@ static void SetPartyMonSelectionActions(struct Pokemon *mons, u8 slotId, u8 acti
     }
 }
 
+// Gunk's: an HM move works for a Pokemon that could learn it from an HM the player owns (badges still apply)
+bool8 Gunk_CanUseHMMoveWithoutKnowing(struct Pokemon *mon, u16 move)
+{
+    u16 item;
+
+    if (GetMonData(mon, MON_DATA_IS_EGG) || GetMonData(mon, MON_DATA_SPECIES) == SPECIES_NONE)
+        return FALSE;
+    for (item = ITEM_HM01; item <= ITEM_HM08; item++)
+    {
+        if (ItemIdToBattleMoveId(item) == move)
+            return CheckBagHasItem(item, 1) && CanMonLearnTMHM(mon, item - ITEM_TM01_FOCUS_PUNCH);
+    }
+    return FALSE;
+}
+
 static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 {
-    u8 i, j;
+    u8 i, j, numFieldMoves = 0;
 
     sPartyMenuInternal->numActions = 0;
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, CURSOR_OPTION_SUMMARY);
@@ -2974,8 +2989,18 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
             if (GetMonData(&mons[slotId], i + MON_DATA_MOVE1) == sFieldMoves[j])
             {
                 AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, j + CURSOR_OPTION_FIELD_MOVES);
+                numFieldMoves++;
                 break;
             }
+        }
+    }
+    // Gunk's: then the HM moves it could learn from an owned HM, while the menu has room (4 field moves at most)
+    for (j = 0; j <= FIELD_MOVE_WATERFALL && numFieldMoves < MAX_MON_MOVES; ++j)
+    {
+        if (!MonKnowsMove(&mons[slotId], sFieldMoves[j]) && Gunk_CanUseHMMoveWithoutKnowing(&mons[slotId], sFieldMoves[j]))
+        {
+            AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, j + CURSOR_OPTION_FIELD_MOVES);
+            numFieldMoves++;
         }
     }
     if (GetMonData(&mons[1], MON_DATA_SPECIES) != SPECIES_NONE)
@@ -4285,8 +4310,7 @@ static void CB2_UseItem(void)
     {
         GiveMoveToMon(&gPlayerParty[gPartyMenu.slotId], ItemIdToBattleMoveId(gSpecialVar_ItemId));
         AdjustFriendship(&gPlayerParty[gPartyMenu.slotId], FRIENDSHIP_EVENT_LEARN_TMHM);
-        if (gSpecialVar_ItemId < ITEM_HM01)
-            RemoveBagItem(gSpecialVar_ItemId, 1);
+        // Gunk's: TMs are reusable, like HMs
         SetMainCallback2(gPartyMenu.exitCallback);
     }
     else
@@ -4305,8 +4329,7 @@ static void CB2_UseTMHMAfterForgettingMove(void)
         SetMonMoveSlot(mon, ItemIdToBattleMoveId(gSpecialVar_ItemId), moveIdx);
         AdjustFriendship(mon, FRIENDSHIP_EVENT_LEARN_TMHM);
         ItemUse_SetQuestLogEvent(QL_EVENT_USED_ITEM, mon, gSpecialVar_ItemId, move);
-        if (gSpecialVar_ItemId < ITEM_HM01)
-            RemoveBagItem(gSpecialVar_ItemId, 1);
+        // Gunk's: TMs are reusable, like HMs
         SetMainCallback2(gPartyMenu.exitCallback);
     }
     else
@@ -4809,8 +4832,7 @@ static void Task_LearnedMove(u8 taskId)
     if (learnMoveMethod == LEARN_VIA_TMHM)
     {
         AdjustFriendship(mon, FRIENDSHIP_EVENT_LEARN_TMHM);
-        if (item < ITEM_HM01)
-            RemoveBagItem(item, 1);
+        // Gunk's: TMs are reusable, like HMs
     }
     GetMonNickname(mon, gStringVar1);
     StringCopy(gStringVar2, gMoveNames[learnMoveId]);
@@ -5295,7 +5317,11 @@ void ItemUseCB_EvolutionStone(u8 taskId, TaskFunc func)
     bool8 noEffect;
 
     PlaySE(SE_SELECT);
-    noEffect = PokemonItemUseNoEffect(&gPlayerParty[gPartyMenu.slotId], gSpecialVar_ItemId, gPartyMenu.slotId, 0);
+    // Gunk's: trade evolution items (Metal Coat, King's Rock...) work like stones but have no item effect entry
+    if (!IS_POKEMON_ITEM(gSpecialVar_ItemId))
+        noEffect = GetEvolutionTargetSpecies(&gPlayerParty[gPartyMenu.slotId], EVO_MODE_ITEM_USE, gSpecialVar_ItemId) == SPECIES_NONE;
+    else
+        noEffect = PokemonItemUseNoEffect(&gPlayerParty[gPartyMenu.slotId], gSpecialVar_ItemId, gPartyMenu.slotId, 0);
     if (noEffect)
     {
         gPartyMenuUseExitCallback = FALSE;
@@ -5310,7 +5336,12 @@ void ItemUseCB_EvolutionStone(u8 taskId, TaskFunc func)
 static void CB2_UseEvolutionStone(void)
 {
     gCB2_AfterEvolution = gPartyMenu.exitCallback;
-    ExecuteTableBasedItemEffect_(gPartyMenu.slotId, gSpecialVar_ItemId, 0);
+    if (!IS_POKEMON_ITEM(gSpecialVar_ItemId))
+        BeginEvolutionScene(&gPlayerParty[gPartyMenu.slotId],
+                            GetEvolutionTargetSpecies(&gPlayerParty[gPartyMenu.slotId], EVO_MODE_ITEM_USE, gSpecialVar_ItemId),
+                            FALSE, gPartyMenu.slotId);
+    else
+        ExecuteTableBasedItemEffect_(gPartyMenu.slotId, gSpecialVar_ItemId, 0);
     ItemUse_SetQuestLogEvent(QL_EVENT_USED_ITEM, &gPlayerParty[gPartyMenu.slotId], gSpecialVar_ItemId, 0xFFFF);
     RemoveBagItem(gSpecialVar_ItemId, 1);
 }

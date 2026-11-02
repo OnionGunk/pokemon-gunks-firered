@@ -473,11 +473,13 @@ static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations)
     u8 slot1Status;
     u8 slot2Status;
     u32 validSectors;
+    bool8 countersDiffer;
     const u32 ALL_SECTORS = (1 << NUM_SECTORS_PER_SLOT) - 1;  // bitmask of all saveblock sectors
 
     // check save slot 1.
     validSectors = 0;
     signatureValid = FALSE;
+    countersDiffer = FALSE;
     for (sector = 0; sector < NUM_SECTORS_PER_SLOT; sector++)
     {
         ReadFlashSector(sector, gSaveDataBufferPtr);
@@ -487,6 +489,8 @@ static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations)
             checksum = CalculateChecksum(gSaveDataBufferPtr->data, locations[gSaveDataBufferPtr->id].size);
             if (gSaveDataBufferPtr->checksum == checksum)
             {
+                if (validSectors != 0 && gSaveDataBufferPtr->counter != slot1saveCounter)
+                    countersDiffer = TRUE;
                 slot1saveCounter = gSaveDataBufferPtr->counter;
                 validSectors |= 1 << gSaveDataBufferPtr->id;
             }
@@ -495,7 +499,9 @@ static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations)
 
     if (signatureValid)
     {
-        if (validSectors == ALL_SECTORS)
+        // Gunk's: all 14 sectors must come from the same save. A save cut off by a power loss leaves the new
+        // sectors in front of the ones from two saves ago; vanilla accepted that mix as a valid slot.
+        if (validSectors == ALL_SECTORS && !countersDiffer)
             slot1Status = SAVE_STATUS_OK;
         else
             slot1Status = SAVE_STATUS_ERROR;
@@ -506,6 +512,7 @@ static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations)
     // check save slot 2.
     validSectors = 0;
     signatureValid = FALSE;
+    countersDiffer = FALSE;
     for (sector = 0; sector < NUM_SECTORS_PER_SLOT; sector++)
     {
         ReadFlashSector(NUM_SECTORS_PER_SLOT + sector, gSaveDataBufferPtr);
@@ -515,6 +522,8 @@ static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations)
             checksum = CalculateChecksum(gSaveDataBufferPtr->data, locations[gSaveDataBufferPtr->id].size);
             if (gSaveDataBufferPtr->checksum == checksum)
             {
+                if (validSectors != 0 && gSaveDataBufferPtr->counter != slot2saveCounter)
+                    countersDiffer = TRUE;
                 slot2saveCounter = gSaveDataBufferPtr->counter;
                 validSectors |= 1 << gSaveDataBufferPtr->id;
             }
@@ -523,7 +532,9 @@ static u8 GetSaveValidStatus(const struct SaveSectorLocation *locations)
 
     if (signatureValid)
     {
-        if (validSectors == ALL_SECTORS)
+        // Gunk's: all 14 sectors must come from the same save. A save cut off by a power loss leaves the new
+        // sectors in front of the ones from two saves ago; vanilla accepted that mix as a valid slot.
+        if (validSectors == ALL_SECTORS && !countersDiffer)
             slot2Status = SAVE_STATUS_OK;
         else
             slot2Status = SAVE_STATUS_ERROR;

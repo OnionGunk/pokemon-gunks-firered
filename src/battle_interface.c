@@ -1868,7 +1868,8 @@ s32 MoveBattleBar(u8 battlerId, u8 healthboxSpriteId, u8 whichBar, u8 unused)
 
         if (increment == 0)
             increment = 1;
-        increment = abs(gBattleSpritesDataPtr->battleBars[battlerId].receivedValue / increment);
+        // Gunk's: the EXP bar fills twice as fast
+        increment = abs(gBattleSpritesDataPtr->battleBars[battlerId].receivedValue / increment) * 2;
 
         currentBarValue = CalcNewBarValue(gBattleSpritesDataPtr->battleBars[battlerId].maxValue,
                                           gBattleSpritesDataPtr->battleBars[battlerId].oldValue,

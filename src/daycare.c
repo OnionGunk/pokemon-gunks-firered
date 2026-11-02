@@ -1153,8 +1153,8 @@ static bool8 TryProduceOrHatchEgg(struct DayCare *daycare)
             TriggerPendingDaycareEgg();
     }
 
-    // Hatch Egg
-    if (++daycare->stepCounter == 255)
+    // Hatch Egg (Gunk's: an egg cycle every 128 steps instead of 256, so eggs hatch twice as fast)
+    if ((++daycare->stepCounter & 0x7F) == 0x7F)
     {
         u32 steps;
 

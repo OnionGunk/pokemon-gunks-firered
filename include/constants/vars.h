@@ -85,8 +85,8 @@
 // Used by Quest Log.
 #define VAR_QUEST_LOG_MON_COUNTS           0x4027
 #define VAR_WONDER_NEWS_STEP_COUNTER       0x4028
-#define VAR_0x4029                         0x4029
-#define VAR_0x402A                         0x402A
+#define VAR_GUNK_LAST_REPEL                0x4029 // Gunk's: the last Repel used, for the "use another?" prompt (unused in vanilla)
+#define VAR_GUNK_REGISTERED_ITEM_2         0x402A // Gunk's: the second registered item, used with R (unused in vanilla)
 #define VAR_0x402B                         0x402B
 #define VAR_0x402C                         0x402C
 #define VAR_0x402D                         0x402D

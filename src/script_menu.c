@@ -974,6 +974,45 @@ static void Hask_MultichoiceGridMenu_HandleInput(u8 taskId)
 #define tSpriteId     data[2]
 #define tWindowId     data[5]
 
+// Gunk's PC menu rows. The values are what the vanilla script expects in VAR_RESULT (see data/scripts/pc.inc).
+enum {
+    PC_ACTION_STORAGE,
+    PC_ACTION_PLAYER,
+    PC_ACTION_OAK,
+    PC_ACTION_HALL_OF_FAME,
+    PC_ACTION_LOG_OFF,
+    PC_ACTION_MOVE_TUTOR,
+};
+#define PC_MENU_MAX_ROWS 6
+
+// Fills actions (when not NULL) with the menu's rows in order and returns how many there are
+static u8 GetPCMenuActions(u8 *actions)
+{
+    u8 buf[PC_MENU_MAX_ROWS];
+    u8 n = 0;
+
+    if (actions == NULL)
+        actions = buf;
+    actions[n++] = PC_ACTION_STORAGE;
+    actions[n++] = PC_ACTION_PLAYER;
+    if (FlagGet(FLAG_SYS_GAME_CLEAR) || FlagGet(FLAG_SYS_POKEDEX_GET))
+        actions[n++] = PC_ACTION_OAK;
+    if (FlagGet(FLAG_SYS_GAME_CLEAR))
+        actions[n++] = PC_ACTION_HALL_OF_FAME;
+    actions[n++] = PC_ACTION_MOVE_TUTOR;
+    actions[n++] = PC_ACTION_LOG_OFF;
+    return n;
+}
+
+void Gunk_TranslatePCMenuResult(void)
+{
+    u8 actions[PC_MENU_MAX_ROWS];
+    u8 n = GetPCMenuActions(actions);
+
+    if (gSpecialVar_Result < n)
+        gSpecialVar_Result = actions[gSpecialVar_Result];
+}
+
 bool8 CreatePCMenu(void)
 {
     if (FuncIsActiveTask(Task_MultichoiceMenu_HandleInput) == TRUE)
@@ -1003,26 +1042,25 @@ static void CreatePCMenuWindow(void)
         windowWidth = 14;
         break;
     }
-    if (FlagGet(FLAG_SYS_GAME_CLEAR))
+    // Gunk's: a MOVE TUTOR row above LOG OFF; Gunk_TranslatePCMenuResult maps rows back to the vanilla choices
+    numItems = GetPCMenuActions(NULL);
+    windowId = CreateWindowFromRect(0, 0, windowWidth, numItems * 2);
+    SetStdWindowBorderStyle(windowId, FALSE);
     {
-        numItems = 5;
-        windowId = CreateWindowFromRect(0, 0, windowWidth, 10);
-        SetStdWindowBorderStyle(windowId, FALSE);
-        AddTextPrinterParameterized(windowId, FONT_NORMAL, gText_ProfOakSPc, cursorWidth, 34, TEXT_SKIP_DRAW, NULL);
-        AddTextPrinterParameterized(windowId, FONT_NORMAL, gText_HallOfFame_2, cursorWidth, 50, TEXT_SKIP_DRAW, NULL);
-        AddTextPrinterParameterized(windowId, FONT_NORMAL, gText_LogOff, cursorWidth, 66, TEXT_SKIP_DRAW, NULL);
-    }
-    else
-    {
-        if (FlagGet(FLAG_SYS_POKEDEX_GET))
-            numItems = 4;
-        else
-            numItems = 3;
-        windowId = CreateWindowFromRect(0, 0, windowWidth, numItems * 2);
-        SetStdWindowBorderStyle(windowId, FALSE);
-        if (FlagGet(FLAG_SYS_POKEDEX_GET))
-            AddTextPrinterParameterized(windowId, FONT_NORMAL, gText_ProfOakSPc, cursorWidth, 34, TEXT_SKIP_DRAW, NULL);
-        AddTextPrinterParameterized(windowId, FONT_NORMAL, gText_LogOff, cursorWidth, 2 + 16 * (numItems - 1), TEXT_SKIP_DRAW, NULL);
+        u8 actions[PC_MENU_MAX_ROWS];
+        u8 i;
+
+        GetPCMenuActions(actions);
+        for (i = 2; i < numItems; i++)
+        {
+            static const u8 *const sRowTexts[] = {
+                [PC_ACTION_OAK] = gText_ProfOakSPc,
+                [PC_ACTION_HALL_OF_FAME] = gText_HallOfFame_2,
+                [PC_ACTION_LOG_OFF] = gText_LogOff,
+                [PC_ACTION_MOVE_TUTOR] = gText_GunkMoveTutor,
+            };
+            AddTextPrinterParameterized(windowId, FONT_NORMAL, sRowTexts[actions[i]], cursorWidth, 2 + 16 * i, TEXT_SKIP_DRAW, NULL);
+        }
     }
     if (FlagGet(FLAG_SYS_NOT_SOMEONES_PC))
         AddTextPrinterParameterized(windowId, FONT_NORMAL, gText_BillSPc, cursorWidth, 2 , TEXT_SKIP_DRAW, NULL);

@@ -719,6 +719,11 @@ static void BagListMenuItemPrintFunc(u8 windowId, u32 itemId, u8 y)
         {
             BlitBitmapToWindow(windowId, sBlit_SelectButton, 0x70, y, 0x18, 0x10);
         }
+        else if (VarGet(VAR_GUNK_REGISTERED_ITEM_2) != ITEM_NONE && VarGet(VAR_GUNK_REGISTERED_ITEM_2) == bagItemId)
+        {
+            static const u8 sRButton[] = _("{R_BUTTON}");
+            BagPrintTextOnWindow(windowId, FONT_SMALL, sRButton, 0x74, y, 0, 0, 0xFF, 1);
+        }
     }
 }
 
@@ -1066,6 +1071,17 @@ static void Task_BagMenu_HandleInput(u8 taskId)
                 return;
             }
         }
+        // Gunk's: START sorts the open pocket (by item number, the order the game lists items in)
+        if (JOY_NEW(START_BUTTON) && gBagMenuState.location == ITEMMENULOCATION_FIELD && sBagMenuDisplay->nItems[gBagMenuState.pocket] > 1)
+        {
+            PlaySE(SE_SELECT);
+            SortAndCompactBagPocket(&gBagPockets[gBagMenuState.pocket]);
+            DestroyListMenuTask(data[0], &gBagMenuState.cursorPos[gBagMenuState.pocket], &gBagMenuState.itemsAbove[gBagMenuState.pocket]);
+            Bag_BuildListMenuTemplate(gBagMenuState.pocket);
+            data[0] = ListMenuInit(&gMultiuseListMenuTemplate, gBagMenuState.cursorPos[gBagMenuState.pocket], gBagMenuState.itemsAbove[gBagMenuState.pocket]);
+            CopyWindowToVram(0, COPYWIN_MAP);
+            return;
+        }
         break;
     }
     input = ListMenu_ProcessInput(data[0]);
@@ -1398,7 +1414,7 @@ static void OpenContextMenu(u8 taskId)
                 sContextMenuItemsPtr = sContextMenuItemsBuffer;
                 sContextMenuNumItems = 3;
                 sContextMenuItemsBuffer[2] = ITEMMENUACTION_CANCEL;
-                if (gSaveBlock1Ptr->registeredItem == gSpecialVar_ItemId)
+                if (gSaveBlock1Ptr->registeredItem == gSpecialVar_ItemId || VarGet(VAR_GUNK_REGISTERED_ITEM_2) == gSpecialVar_ItemId)
                     sContextMenuItemsBuffer[1] = ITEMMENUACTION_DESELECT;
                 else
                     sContextMenuItemsBuffer[1] = ITEMMENUACTION_REGISTER;
@@ -1585,10 +1601,21 @@ static void Task_ItemMenuAction_ToggleSelect(u8 taskId)
     u16 itemId;
     s16 *data = gTasks[taskId].data;
     itemId = BagGetItemIdByPocketPosition(gBagMenuState.pocket + 1, data[1]);
+    // Gunk's two registered items: the latest on SELECT, the one before it on R
     if (gSaveBlock1Ptr->registeredItem == itemId)
-        gSaveBlock1Ptr->registeredItem = ITEM_NONE;
+    {
+        gSaveBlock1Ptr->registeredItem = VarGet(VAR_GUNK_REGISTERED_ITEM_2);
+        VarSet(VAR_GUNK_REGISTERED_ITEM_2, ITEM_NONE);
+    }
+    else if (VarGet(VAR_GUNK_REGISTERED_ITEM_2) == itemId)
+    {
+        VarSet(VAR_GUNK_REGISTERED_ITEM_2, ITEM_NONE);
+    }
     else
+    {
+        VarSet(VAR_GUNK_REGISTERED_ITEM_2, gSaveBlock1Ptr->registeredItem);
         gSaveBlock1Ptr->registeredItem = itemId;
+    }
 
     DestroyListMenuTask(data[0], &gBagMenuState.cursorPos[gBagMenuState.pocket], &gBagMenuState.itemsAbove[gBagMenuState.pocket]);
     Bag_BuildListMenuTemplate(gBagMenuState.pocket);
@@ -2042,6 +2069,31 @@ bool8 UseRegisteredKeyItemOnField(void)
         gSaveBlock1Ptr->registeredItem = ITEM_NONE;
     }
     ScriptContext_SetupScript(EventScript_BagItemCanBeRegistered);
+    return TRUE;
+}
+
+// Gunk's: R uses the second registered item (does nothing when there is none)
+bool8 Gunk_UseSecondRegisteredItemOnField(void)
+{
+    u8 taskId;
+    u16 item = VarGet(VAR_GUNK_REGISTERED_ITEM_2);
+
+    if (InUnionRoom() == TRUE || item == ITEM_NONE)
+        return FALSE;
+    if (CheckBagHasItem(item, 1) != TRUE)
+    {
+        VarSet(VAR_GUNK_REGISTERED_ITEM_2, ITEM_NONE);
+        return FALSE;
+    }
+    DismissMapNamePopup();
+    ChangeBgY(0, 0, 0);
+    LockPlayerFieldControls();
+    FreezeObjectEvents();
+    HandleEnforcedLookDirectionOnPlayerStopMoving();
+    StopPlayerAvatar();
+    gSpecialVar_ItemId = item;
+    taskId = CreateTask(ItemId_GetFieldFunc(item), 8);
+    gTasks[taskId].data[3] = 1;
     return TRUE;
 }
 

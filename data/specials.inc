@@ -452,4 +452,6 @@ gSpecials::
 	def_special UpdateLoreleiDollCollection
 	def_special LoopWingFlapSound
 	def_special CreateEnemyEventMon
+	def_special Gunk_RestartRepel  @ Gunk's
+	def_special Gunk_TranslatePCMenuResult  @ Gunk's
 gSpecialsEnd::

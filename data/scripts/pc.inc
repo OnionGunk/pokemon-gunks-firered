@@ -22,6 +22,7 @@ EventScript_PCMainMenu::
 	waitmessage
 	special CreatePCMenu
 	waitstate
+	special Gunk_TranslatePCMenuResult
 	goto EventScript_ChoosePCMenu
 	end
 
@@ -32,8 +33,119 @@ EventScript_ChoosePCMenu::
 	case 2, EventScript_AccessProfOaksPC
 	case 3, EventScript_AccessHallOfFame
 	case 4, EventScript_TurnOffPC
+	case 5, EventScript_GunkMoveTutor
 	case SCR_MENU_CANCEL, EventScript_TurnOffPC
 	end
+
+@ Gunk's: a free Move Tutor on every PC. It remembers level-up moves (like the Move Maniac on Two Island)
+@ and forgets moves (like the Move Deleter in Fuchsia City).
+EventScript_GunkMoveTutor::
+	playse SE_PC_LOGIN
+	msgbox Text_GunkMoveTutorRemember, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, YES, EventScript_GunkMoveTutorChooseMonRemember
+	msgbox Text_GunkMoveTutorForget, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, YES, EventScript_GunkMoveTutorChooseMonForget
+	goto EventScript_PCMainMenu
+	end
+
+EventScript_GunkMoveTutorChooseMonRemember::
+	msgbox Text_GunkMoveTutorWhichMonRemember
+	special ChooseMonForMoveRelearner
+	waitstate
+	goto_if_ge VAR_0x8004, PARTY_SIZE, EventScript_PCMainMenu
+	special IsSelectedMonEgg
+	goto_if_eq VAR_RESULT, TRUE, EventScript_GunkMoveTutorEggRemember
+	goto_if_eq VAR_0x8005, 0, EventScript_GunkMoveTutorNoMoves
+	msgbox Text_GunkMoveTutorWhichMoveRemember
+	special TeachMoveRelearnerMove
+	waitstate
+	goto_if_eq VAR_0x8004, 0, EventScript_GunkMoveTutorChooseMonRemember
+	goto EventScript_PCMainMenu
+	end
+
+EventScript_GunkMoveTutorEggRemember::
+	msgbox Text_GunkMoveTutorEgg
+	goto EventScript_GunkMoveTutorChooseMonRemember
+	end
+
+EventScript_GunkMoveTutorNoMoves::
+	msgbox Text_GunkMoveTutorNoMoves
+	goto EventScript_GunkMoveTutorChooseMonRemember
+	end
+
+EventScript_GunkMoveTutorChooseMonForget::
+	msgbox Text_GunkMoveTutorWhichMonForget
+	special ChoosePartyMon
+	waitstate
+	goto_if_ge VAR_0x8004, PARTY_SIZE, EventScript_PCMainMenu
+	special IsSelectedMonEgg
+	goto_if_eq VAR_RESULT, TRUE, EventScript_GunkMoveTutorEggForget
+	special GetNumMovesSelectedMonHas
+	goto_if_eq VAR_RESULT, 1, EventScript_GunkMoveTutorOnlyMove
+	msgbox Text_GunkMoveTutorWhichMoveForget
+	fadescreen FADE_TO_BLACK
+	special SelectMoveDeleterMove
+	fadescreen FADE_FROM_BLACK
+	goto_if_eq VAR_0x8005, MAX_MON_MOVES, EventScript_GunkMoveTutorChooseMonForget
+	special BufferMoveDeleterNicknameAndMove
+	msgbox Text_GunkMoveTutorConfirmForget, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, EventScript_GunkMoveTutorChooseMonForget
+	special MoveDeleterForgetMove
+	playfanfare MUS_MOVE_DELETED
+	waitfanfare
+	msgbox Text_GunkMoveTutorForgotten
+	goto EventScript_PCMainMenu
+	end
+
+EventScript_GunkMoveTutorEggForget::
+	msgbox Text_GunkMoveTutorEgg
+	goto EventScript_GunkMoveTutorChooseMonForget
+	end
+
+EventScript_GunkMoveTutorOnlyMove::
+	special BufferMoveDeleterNicknameAndMove
+	msgbox Text_GunkMoveTutorOnlyMove
+	goto EventScript_GunkMoveTutorChooseMonForget
+	end
+
+Text_GunkMoveTutorRemember::
+	.string "MOVE TUTOR: Should a POKéMON\n"
+	.string "remember a move it used to know?$"
+
+Text_GunkMoveTutorForget::
+	.string "Should a POKéMON forget a move?$"
+
+Text_GunkMoveTutorWhichMonRemember::
+	.string "Which POKéMON should remember\n"
+	.string "a move?$"
+
+Text_GunkMoveTutorWhichMoveRemember::
+	.string "Which move should it remember?$"
+
+Text_GunkMoveTutorNoMoves::
+	.string "That POKéMON has no move to\n"
+	.string "remember.$"
+
+Text_GunkMoveTutorEgg::
+	.string "An EGG doesn't know any moves.$"
+
+Text_GunkMoveTutorWhichMonForget::
+	.string "Which POKéMON should forget\n"
+	.string "a move?$"
+
+Text_GunkMoveTutorWhichMoveForget::
+	.string "Which move should be forgotten?$"
+
+Text_GunkMoveTutorConfirmForget::
+	.string "Should {STR_VAR_1} forget\n"
+	.string "{STR_VAR_2}?$"
+
+Text_GunkMoveTutorForgotten::
+	.string "{STR_VAR_1} forgot {STR_VAR_2}.$"
+
+Text_GunkMoveTutorOnlyMove::
+	.string "{STR_VAR_1} only knows one move,\n"
+	.string "so it can't forget it.$"
 
 EventScript_AccessPlayersPC::
 	playse SE_PC_LOGIN
