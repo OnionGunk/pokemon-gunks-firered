@@ -1,12 +1,10 @@
 """Save-safety suite for Gunk's FireRed.
 
 Usage: py -3 emu/suite/suite.py <rom.gba> <rom.elf> [test ...]
-Tests: cycles crash torn damaged (default: all). Results go to emu/suite/out/<rom name>/.
+Tests: cycles crash torn mixed damaged (default: all). Results go to emu/suite/out/<rom name>/.
 
 The oracle for every power-cut case: after Continue, the game must be in the field, its gSaveCounter must be
-the old or the new save's, and every sector of the slot it loaded must carry that counter. Vanilla only checks
-each sector's checksum, so a slot torn between two saves (new sectors at the front, sectors from two saves ago
-behind) passes as valid and loads a mix of two saves.
+the old or the new save's, and every sector of the slot it loaded must carry that counter (no mix of saves).
 """
 import os
 import sys
@@ -119,6 +117,23 @@ class Suite:
             ok, detail = check_loaded(g, want, f"{k}/{SLOT_SECTORS} sectors of the new save written")
             self.record("torn", ok, detail)
 
+    def test_mixed(self):
+        """A slot with all 14 sectors present and valid, but the first 7 (by position) from the save two before.
+        A sequential power cut can't make this (sectors rotate, so a torn slot always lacks one), but vanilla
+        would load it as the newest save; Gunk's must take the other slot."""
+        g = self.game
+        slot = slot_of(3)
+        old_by_id = {sid: s for (s, sid, _, _, _) in footers(self.f2)[slot * SLOT_SECTORS:(slot + 1) * SLOT_SECTORS]}
+        img = bytearray(self.f3)
+        for (s, sid, _, _, _) in footers(self.f3)[slot * SLOT_SECTORS:slot * SLOT_SECTORS + 7]:
+            o = old_by_id[sid]
+            img[s * SECTOR:(s + 1) * SECTOR] = self.f2[o * SECTOR:(o + 1) * SECTOR]
+        g.set_flash(bytes(img))
+        g.reboot()
+        g.boot_continue()
+        ok, detail = check_loaded(g, {2}, "slot with every sector, half from an older save")
+        self.record("mixed", ok, detail)
+
     def test_damaged(self):
         g = self.game
         for label, slots, want in (("newest slot damaged", [slot_of(3)], {2}),
@@ -151,17 +166,17 @@ class Suite:
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
-    tests = sys.argv[3:] or ["cycles", "crash", "torn", "damaged"]
+    tests = sys.argv[3:] or ["cycles", "crash", "torn", "mixed", "damaged"]
     t0 = time.time()
     s = Suite(rom, elf)
     try:
         s.fresh()
         if "cycles" in tests:
             s.test_cycles()
-        if any(t in tests for t in ("crash", "torn", "damaged")):
+        if any(t in tests for t in ("crash", "torn", "mixed", "damaged")):
             s.base_saves()
             print(f"save 3 took {s.save3_frames} frames", flush=True)
-        for t in ("crash", "torn", "damaged"):
+        for t in ("crash", "torn", "mixed", "damaged"):
             if t in tests:
                 getattr(s, "test_" + t)()
     finally:

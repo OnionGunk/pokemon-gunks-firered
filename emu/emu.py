@@ -172,6 +172,10 @@ def start(rom):
     for p in (CMD, DONE, os.path.join(DIR, "buttons.txt")):
         if os.path.exists(p):
             os.remove(p)
+    # the harness owns the cart save (tests write it through the SRAM domain): drop BizHawk's own SaveRAM files,
+    # or a killed run leaves an autosave behind and the next start waits on "Load autosaved SaveRAM?"
+    import shutil
+    shutil.rmtree(os.path.join(DIR, "GBA", "SaveRAM"), ignore_errors=True)
     # start minimized and inactive (SW_SHOWMINNOACTIVE) so a test run never takes focus from what the user is
     # doing; set EMU_SHOW=1 to get a normal window
     si = subprocess.STARTUPINFO()

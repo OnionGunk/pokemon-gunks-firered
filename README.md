@@ -8,13 +8,15 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
 - **DexNav.** A key item that lists the grass Pokémon of the place you're in: seen ones by name, unseen ones as
   dashes. Pick one and it hides in a patch of rustling grass nearby; step in to battle it. Every Pokémon it finds
   is a legal wild roll for that spot. Search levels and chains raise the odds of good IVs and shinies.
+- **Pokémon follow you.** Your lead Pokémon walks behind you, any of the 386 species, shinies in their shiny
+  colors. Walk into it to swap places; it waits on the shore while you Surf and hops down ledges after you.
 - **Faster play:** instant text, a faster EXP bar, auto-run (hold B to walk), eggs that hatch twice as fast.
 - **Items:** reusable TMs, two registered items (SELECT and R), bag sorting (START in the bag), a prompt to use
   another Repel when one runs out, and an Endless Repel you switch on and off.
 - **Pokémon:** IV and EV view in the summary (A on the SKILLS page), Exp. All (half the EXP and the EVs for the
   Pokémon that didn't battle), vitamins up to 252 EVs, and trade evolutions without trading. HM moves work without
   teaching the move, and every PC has a free Move Tutor that remembers and forgets moves.
-- **Save safety:** a save cut off by a power loss can no longer load as a mix of two saves (see below).
+- **Save safety:** an extra check when loading, so a save slot can only load if all of it comes from one save.
 
 Oak's aide gives the Endless Repel, the Exp. All and the DexNav along with the Running Shoes in Pewter City. On a
 save that is already past Pewter, Mom has them.
@@ -22,13 +24,16 @@ save that is already past Pewter, Mom has them.
 Save safety comes first: every build passes an emulator test suite that covers save cycles, power cuts at points
 across the flash write, torn writes at every sector, and recovery from a damaged save slot.
 
-### The save fix
+### Save safety
 
-FireRed keeps two save slots and writes the older one each time. When it loads, vanilla only checks that each of
-a slot's 14 sectors has a good checksum. If the power goes off partway through a save, the slot being written
-holds the new save's first sectors and the sectors from two saves ago after them. Every checksum is good, so
-vanilla can load that mix. Gunk's FireRed also requires all 14 sectors to come from the same save, and falls back
-to the other slot otherwise.
+FireRed keeps two save slots and writes the older one each time, so a power cut while saving falls back to
+the previous save. The test suite confirms this for vanilla and for Gunk's FireRed: power cuts at 12 points
+across the flash write, and torn writes at every one of the 14 sectors, all load the previous save.
+
+Gunk's FireRed adds one more check. Vanilla accepts a slot when each of its 14 sectors has a good checksum;
+Gunk's also requires all 14 to carry the same save counter. A normal power cut can't produce a slot that
+fails only that check, but a slot holding sectors from two different saves now falls back to the other slot
+instead of loading as a mix (the suite's "mixed" test builds one).
 
 ## Play it
 
@@ -59,8 +64,12 @@ and `docs/GUNK_CHANGES.md` lists every change with how it was tested.
 - The DexNav idea comes from later Pokémon games and fan hacks; ghoulslash's DexNav for
   [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion) was the reference for its design.
 - The Repel prompt follows the one in [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion).
-- [MinimalEffort07/pokefirered](https://github.com/MinimalEffort07/pokefirered) showed that FireRed's unused
-  shaking-grass field effect and SaveBlock1's unused bytes are free to use.
+- [MinimalEffort07/pokefirered](https://github.com/MinimalEffort07/pokefirered): the follower's movement (walkable
+  tiles, catching up, swapping places, making way at ledges and shores) is ported from its Walk With Pokémon
+  feature, and it showed that FireRed's unused shaking-grass field effect and SaveBlock1's unused bytes are free.
+- The follower sprites come from [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion),
+  originally from aarant's [followers branch](https://github.com/aarant/pokeemerald/tree/followers-expanded-id),
+  and the artists credited there.
 
 Pokémon is © Nintendo, Creatures Inc. and GAME FREAK inc. This is a non-commercial fan project and contains
 no ROM data; you need your own legally dumped copy of the game.
