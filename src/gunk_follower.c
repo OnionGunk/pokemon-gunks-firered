@@ -526,6 +526,9 @@ static bool8 IsWarpEventAt(s16 x, s16 y)
 
 static bool8 IsFollowerWalkableTile(struct ObjectEvent *mover, s16 x, s16 y, u8 direction)
 {
+    if (direction < DIR_SOUTH || direction > DIR_EAST) /* Gunk's: see FindFollowerTileNearPlayer */
+        return FALSE;
+
     if (GetCollisionAtCoords(mover, x, y, direction) != COLLISION_NONE)
         return FALSE;
     if (IsWarpEventAt(x, y))
@@ -687,6 +690,14 @@ static bool8 FindFollowerTileNearPlayer(u8 elevation, struct ObjectEvent *player
     u8 candidates[3];
     u8 i;
     s16 x, y;
+
+    /*
+     * Gunk's: while a map loads, the player can still face DIR_NONE (0). Its opposite is 0 too, and the
+     * collision check indexes a table of function pointers by direction - 1, so a 0 jumped to garbage and
+     * hung the load (seen arriving in Mt. Moon, Diglett's Cave, Victory Road, Seafoam Islands).
+     */
+    if (facing < DIR_SOUTH || facing > DIR_EAST)
+        facing = DIR_SOUTH;
 
     memset(&standIn, 0, sizeof(standIn));
     standIn.currentCoords = playerObj->currentCoords;
