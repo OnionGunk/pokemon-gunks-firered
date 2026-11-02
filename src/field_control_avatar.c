@@ -407,6 +407,17 @@ static const u8 *GetInteractionScript(struct MapPosition *position, u8 metatileB
     return NULL;
 }
 
+// Objects without a map template have no script: the player and Gunk's follower. Pressing A at one looks past it
+// (a lookup for its script would read garbage; MinimalEffort07/pokefirered found the freeze this caused).
+static bool8 IsTalkableObjectEvent(u8 objectEventId)
+{
+    if (objectEventId == OBJECT_EVENTS_COUNT)
+        return FALSE;
+    if (gObjectEvents[objectEventId].localId == LOCALID_PLAYER || gObjectEvents[objectEventId].localId == LOCALID_FOLLOWER)
+        return FALSE;
+    return TRUE;
+}
+
 const u8 *GetInteractedLinkPlayerScript(struct MapPosition *position, u8 metatileBehavior, u8 direction)
 {
     u8 objectEventId;
@@ -417,7 +428,7 @@ const u8 *GetInteractedLinkPlayerScript(struct MapPosition *position, u8 metatil
     else
         objectEventId = GetObjectEventIdByPosition(position->x + gDirectionToVectors[direction].x, position->y + gDirectionToVectors[direction].y, position->elevation);
 
-    if (objectEventId == OBJECT_EVENTS_COUNT || gObjectEvents[objectEventId].localId == LOCALID_PLAYER)
+    if (!IsTalkableObjectEvent(objectEventId))
         return NULL;
 
     for (i = 0; i < MAX_LINK_PLAYERS; i++)
@@ -438,14 +449,14 @@ static const u8 *GetInteractedObjectEventScript(struct MapPosition *position, u8
     const u8 *script;
 
     objectEventId = GetObjectEventIdByPosition(position->x, position->y, position->elevation);
-    if (objectEventId == OBJECT_EVENTS_COUNT || gObjectEvents[objectEventId].localId == LOCALID_PLAYER)
+    if (!IsTalkableObjectEvent(objectEventId))
     {
         if (MetatileBehavior_IsCounter(metatileBehavior) != TRUE)
             return NULL;
 
         // Look for an object event on the other side of the counter.
         objectEventId = GetObjectEventIdByPosition(position->x + gDirectionToVectors[direction].x, position->y + gDirectionToVectors[direction].y, position->elevation);
-        if (objectEventId == OBJECT_EVENTS_COUNT || gObjectEvents[objectEventId].localId == LOCALID_PLAYER)
+        if (!IsTalkableObjectEvent(objectEventId))
             return NULL;
     }
 

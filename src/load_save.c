@@ -2,6 +2,7 @@
 #include "gflib.h"
 #include "gba/flash_internal.h"
 #include "load_save.h"
+#include "gunk_follower.h"
 #include "pokemon.h"
 #include "pokemon_storage_system.h"
 #include "random.h"
@@ -197,6 +198,8 @@ void SaveSerializedGame(void)
 {
     SavePlayerParty();
     SaveObjectEvents();
+    // Gunk's follower is session-only: never write its object event to flash (src/gunk_follower.c)
+    ClearFollowerFromSaveBlock();
 }
 
 void LoadSerializedGame(void)

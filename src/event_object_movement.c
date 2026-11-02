@@ -2,6 +2,7 @@
 #include "gflib.h"
 #include "event_data.h"
 #include "event_object_movement.h"
+#include "gunk_follower.h"
 #include "field_camera.h"
 #include "field_control_avatar.h"
 #include "field_effect.h"
@@ -440,6 +441,7 @@ static const u8 gInitialMovementTypeFacingDirections[MOVEMENT_TYPES_COUNT] = {
     [MOVEMENT_TYPE_WANDER_AROUND_SLOWER] = DIR_SOUTH,
 };
 
+#define OBJ_EVENT_PAL_TAG_GUNK_FOLLOWER               0x1150 // Gunk's
 #define OBJ_EVENT_PAL_TAG_PLAYER_RED                  0x1100
 #define OBJ_EVENT_PAL_TAG_PLAYER_RED_REFLECTION       0x1101
 #define OBJ_EVENT_PAL_TAG_BRIDGE_REFLECTION           0x1102
@@ -1584,6 +1586,8 @@ static u8 TrySetupObjectEventSprite(const struct ObjectEventTemplate *objectEven
     sprite->x += 8;
     sprite->y += 16 + sprite->centerToCornerVecY;
     sprite->oam.paletteNum = graphicsInfo->paletteSlot;
+    if (objectEvent->graphicsId == OBJ_EVENT_GFX_GUNK_FOLLOWER)
+        sprite->oam.paletteNum = LoadGunkFollowerPalette();
     sprite->coordOffsetEnabled = TRUE;
     sprite->data[0] = objectEventId;
     objectEvent->spriteId = spriteId;
@@ -1828,6 +1832,9 @@ void RemoveObjectEventsOutsideView(void)
             if (gLinkPlayerObjectEvents[j].active && i == gLinkPlayerObjectEvents[j].objEventId)
                 isActiveLinkPlayer = TRUE;
         }
+        // Gunk's follower is never culled as off-screen: it walks back into view behind the player
+        if (IsFollowerActive() && i == GetFollowerObjEventId())
+            isActiveLinkPlayer = TRUE;
         if (!isActiveLinkPlayer)
         {
             struct ObjectEvent *objectEvent = &gObjectEvents[i];
@@ -2037,10 +2044,78 @@ void PlayerObjectTurn(struct PlayerAvatar *playerAvatar, u8 direction)
     ObjectEventTurn(&gObjectEvents[playerAvatar->objectEventId], direction);
 }
 
+// Gunk's follower: one graphics id whose sheet and palette are those of the walking Pokemon's species. The
+// sheets have six frames (south, north, west, two each); the standard animation table wants nine (face S/N/W,
+// then two walk frames each), so the frame list maps them: a step alternates the two frames of its direction.
+struct GunkFollowerGfx
+{
+    const u32 *pic;
+    const u16 *pal;
+    const u16 *shinyPal;
+};
+#include "data/gunk_followers.h"
+
+#define GUNK_FOLLOWER_FRAME_SIZE (32 * 32 / 2)
+
+static EWRAM_DATA struct SpriteFrameImage sGunkFollowerFrames[9] = {0};
+static EWRAM_DATA struct ObjectEventGraphicsInfo sGunkFollowerGfxInfo = {0};
+static EWRAM_DATA const u16 *sGunkFollowerPalette = NULL;
+
+bool8 SetGunkFollowerGraphics(u16 species, bool8 shiny)
+{
+    static const u8 sFrameOfImage[9] = {0, 2, 4, 1, 1, 3, 3, 5, 5};
+    u8 i;
+
+    if (species == SPECIES_NONE || species >= NUM_SPECIES || sGunkFollowerGfx[species].pic == NULL)
+        return FALSE;
+    for (i = 0; i < ARRAY_COUNT(sGunkFollowerFrames); i++)
+    {
+        sGunkFollowerFrames[i].data = (const u8 *)sGunkFollowerGfx[species].pic + sFrameOfImage[i] * GUNK_FOLLOWER_FRAME_SIZE;
+        sGunkFollowerFrames[i].size = GUNK_FOLLOWER_FRAME_SIZE;
+    }
+    sGunkFollowerGfxInfo.tileTag = TAG_NONE;
+    sGunkFollowerGfxInfo.paletteTag = OBJ_EVENT_PAL_TAG_GUNK_FOLLOWER;
+    sGunkFollowerGfxInfo.reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE;
+    sGunkFollowerGfxInfo.size = GUNK_FOLLOWER_FRAME_SIZE;
+    sGunkFollowerGfxInfo.width = 32;
+    sGunkFollowerGfxInfo.height = 32;
+    sGunkFollowerGfxInfo.paletteSlot = PALSLOT_NPC_1;
+    sGunkFollowerGfxInfo.shadowSize = SHADOW_SIZE_M;
+    sGunkFollowerGfxInfo.inanimate = FALSE;
+    sGunkFollowerGfxInfo.disableReflectionPaletteLoad = TRUE;
+    sGunkFollowerGfxInfo.tracks = TRACKS_FOOT;
+    sGunkFollowerGfxInfo.oam = &gObjectEventBaseOam_32x32;
+    sGunkFollowerGfxInfo.subspriteTables = gObjectEventSpriteOamTables_32x32;
+    sGunkFollowerGfxInfo.anims = sAnimTable_Standard;
+    sGunkFollowerGfxInfo.images = sGunkFollowerFrames;
+    sGunkFollowerGfxInfo.affineAnims = gDummySpriteAffineAnimTable;
+    sGunkFollowerPalette = shiny ? sGunkFollowerGfx[species].shinyPal : sGunkFollowerGfx[species].pal;
+    return TRUE;
+}
+
+// The follower's palette goes in a free palette slot of its own, so it never recolors the map's NPCs
+static u8 LoadGunkFollowerPalette(void)
+{
+    struct SpritePalette palette;
+    u8 paletteNum;
+
+    FreeSpritePaletteByTag(OBJ_EVENT_PAL_TAG_GUNK_FOLLOWER);
+    palette.data = sGunkFollowerPalette;
+    palette.tag = OBJ_EVENT_PAL_TAG_GUNK_FOLLOWER;
+    paletteNum = LoadSpritePalette(&palette);
+    if (paletteNum == 0xFF)
+        return PALSLOT_NPC_1;
+    UpdateSpritePaletteWithWeather(paletteNum);
+    return paletteNum;
+}
+
 const struct ObjectEventGraphicsInfo *GetObjectEventGraphicsInfo(u8 graphicsId)
 {
     if (graphicsId >= OBJ_EVENT_GFX_VARS)
         graphicsId = VarGetObjectEventGraphicsId(graphicsId - OBJ_EVENT_GFX_VARS);
+
+    if (graphicsId == OBJ_EVENT_GFX_GUNK_FOLLOWER && sGunkFollowerGfxInfo.images != NULL)
+        return &sGunkFollowerGfxInfo;
     
     if (graphicsId >= NUM_OBJ_EVENT_GFX)
         graphicsId = OBJ_EVENT_GFX_LITTLE_BOY;
@@ -6529,7 +6604,12 @@ void InitNpcForRunSlow(struct ObjectEvent *objectEvent, struct Sprite *sprite, u
 void InitRunSlow(struct ObjectEvent *objectEvent, struct Sprite *sprite, u8 direction)
 {
     InitNpcForRunSlow(objectEvent, sprite, direction);
-    SetStepAnimHandleAlternation(objectEvent, sprite, GetRunningDirectionAnimNum(objectEvent->facingDirection));
+    // Only the player has run frames. The one other object that takes this step is Gunk's follower, swapping
+    // places on rock stairs with a player who runs into it; its walk frames at the fast rate stand in.
+    if (!objectEvent->isPlayer)
+        SetStepAnimHandleAlternation(objectEvent, sprite, GetMoveDirectionFastAnimNum(objectEvent->facingDirection));
+    else
+        SetStepAnimHandleAlternation(objectEvent, sprite, GetRunningDirectionAnimNum(objectEvent->facingDirection));
 }
 
 bool8 UpdateRunSlow(struct ObjectEvent *objectEvent, struct Sprite *sprite)

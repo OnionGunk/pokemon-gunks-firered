@@ -52,6 +52,7 @@
 #include "constants/maps.h"
 #include "constants/region_map_sections.h"
 #include "gunk_dexnav.h"
+#include "gunk_follower.h"
 #include "constants/songs.h"
 #include "constants/sound.h"
 
@@ -790,6 +791,7 @@ static void LoadMapFromWarp(bool32 unused)
 {
     bool8 isOutdoors;
 
+    DespawnFollowerSprite();
     LoadCurrentMapData();
     LoadObjEventTemplatesFromHeader();
     isOutdoors = IsMapTypeOutdoors(gMapHeader.mapType);
@@ -1456,6 +1458,7 @@ void CB1_Overworld(void)
         else
         {
             DoCB1_Overworld(gMain.newKeys, gMain.heldKeys);
+            UpdateFollowerPokemon();
             Gunk_DexNavUpdate();
         }
     }
@@ -2149,12 +2152,14 @@ static void InitObjectEventsLocal(void)
     SetPlayerAvatarTransitionFlags(player->transitionFlags);
     ResetInitialPlayerAvatarState();
     TrySpawnObjectEvents(0, 0);
+    SpawnFollowerSprite();
     TryRunOnWarpIntoMapScript();
 }
 
 static void ReloadObjectsAndRunReturnToFieldMapScript(void)
 {
     SpawnObjectEventsOnReturnToField(0, 0);
+    SpawnFollowerSprite();
     RunOnReturnToFieldMapScript();
 }
 

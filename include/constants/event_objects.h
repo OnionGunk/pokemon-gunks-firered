@@ -155,8 +155,9 @@
 #define OBJ_EVENT_GFX_DEOXYS_A 149
 #define OBJ_EVENT_GFX_DEOXYS_N 150
 #define OBJ_EVENT_GFX_SS_ANNE 151
+#define OBJ_EVENT_GFX_GUNK_FOLLOWER 152 // Gunk's: the walking Pokemon; its sprite is set per species (src/gunk_follower.c)
 
-#define NUM_OBJ_EVENT_GFX     152
+#define NUM_OBJ_EVENT_GFX     153
 
 // These are dynamic object gfx ids.
 // They correspond with the values of the VAR_OBJ_GFX_ID_X vars.
@@ -202,6 +203,7 @@
 #define LOCALID_NONE                         0
 #define LOCALID_CAMERA                     127
 #define LOCALID_BERRY_BLENDER_PLAYER_END   240 // This will use 5 (MAX_RFU_PLAYERS) IDs ending at 240, i.e. 236-240
+#define LOCALID_FOLLOWER                   254 // Gunk's walking Pokemon (no map template, never saved)
 #define LOCALID_PLAYER                     255
 
 // Aliases for old names. "object event id" normally refers to an index into gObjectEvents, which these are not.

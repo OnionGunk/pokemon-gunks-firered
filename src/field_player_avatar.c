@@ -9,6 +9,7 @@
 #include "field_effect.h"
 #include "field_effect_helpers.h"
 #include "field_player_avatar.h"
+#include "gunk_follower.h"
 #include "help_system.h"
 #include "metatile_behavior.h"
 #include "new_menu_helpers.h"
@@ -485,8 +486,10 @@ static void PlayerNotOnBikeTurningInPlace(u8 direction, u16 heldKeys)
 static void PlayerNotOnBikeMoving(u8 direction, u16 heldKeys)
 {
     u8 collision = CheckForPlayerAvatarCollision(direction);
+    // Gunk's follower: walking into it swaps places instead of bumping (src/gunk_follower.c, SWAPPING PLACES)
+    bool8 swap = (collision == COLLISION_OBJECT_EVENT && CanPlayerSwapWithFollower(direction));
 
-    if (collision != COLLISION_NONE)
+    if (collision != COLLISION_NONE && !swap)
     {
         if (collision == COLLISION_LEDGE_JUMP)
         {
@@ -522,7 +525,6 @@ static void PlayerNotOnBikeMoving(u8 direction, u16 heldKeys)
         else
             PlayerRun(direction);
         gPlayerAvatar.flags |= PLAYER_AVATAR_FLAG_DASH;
-        return;
     }
     else
     {
@@ -531,6 +533,10 @@ static void PlayerNotOnBikeMoving(u8 direction, u16 heldKeys)
         else
             PlayerWalkNormal(direction);
     }
+
+    // the follower's half of the swap, matched to the step just chosen
+    if (swap)
+        StartFollowerSwapStep(direction);
 }
 
 bool32 PlayerIsMovingOnRockStairs(u8 direction)
@@ -597,18 +603,23 @@ static const u8 sQuestLogSurfDismountActionIds[] = {
 
 static bool8 CanStopSurfing(s16 x, s16 y, u8 direction)
 {
-    if ((gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_SURFING)
-        && MapGridGetElevationAt(x, y) == 3
-        && GetObjectEventIdByPosition(x, y, 3) == OBJECT_EVENTS_COUNT)
-    {
-        QuestLogRecordPlayerAvatarGfxTransitionWithDuration(sQuestLogSurfDismountActionIds[direction], 16);
-        CreateStopSurfingTask(direction);
-        return TRUE;
-    }
-    else
-    {
+    u8 makeWayDirection = DIR_NONE;
+
+    if (!(gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_SURFING) || MapGridGetElevationAt(x, y) != 3)
         return FALSE;
+    // Gunk's follower: one waiting on the landing tile steps aside (src/gunk_follower.c, MAKING WAY)
+    if (GetObjectEventIdByPosition(x, y, 3) != OBJECT_EVENTS_COUNT)
+    {
+        makeWayDirection = GetFollowerMakeWayDirection(x, y, direction);
+        if (makeWayDirection == DIR_NONE)
+            return FALSE;
     }
+
+    QuestLogRecordPlayerAvatarGfxTransitionWithDuration(sQuestLogSurfDismountActionIds[direction], 16);
+    CreateStopSurfingTask(direction);
+    if (makeWayDirection != DIR_NONE)
+        StartFollowerMakeWayStep(makeWayDirection);
+    return TRUE;
 }
 
 static bool8 ShouldJumpLedge(s16 x, s16 y, u8 direction)
@@ -905,8 +916,20 @@ void PlayerTurnInPlace(u8 direction)
 
 void PlayerJumpLedge(u8 direction)
 {
+    struct ObjectEvent *playerObj = &gObjectEvents[gPlayerAvatar.objectEventId];
+    s16 x = playerObj->currentCoords.x;
+    s16 y = playerObj->currentCoords.y;
+    u8 makeWayDirection;
+
+    // Gunk's follower: one standing on the landing tile, two tiles on, steps aside
+    MoveCoords(direction, &x, &y);
+    MoveCoords(direction, &x, &y);
+    makeWayDirection = GetFollowerMakeWayDirection(x, y, direction);
+
     PlaySE(SE_LEDGE);
     PlayerSetAnimId(GetJump2MovementAction(direction), 8);
+    if (makeWayDirection != DIR_NONE)
+        StartFollowerMakeWayStep(makeWayDirection);
 }
 
 // Shakes head for male player character,

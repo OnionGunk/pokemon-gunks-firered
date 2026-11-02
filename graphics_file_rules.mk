@@ -449,3 +449,7 @@ $(WALLPAPERGFXDIR)/tiles/tiles.4bpp: %.4bpp: %.png
 
 $(WALLPAPERGFXDIR)/volcano/tiles.4bpp: %.4bpp: %.png
 	$(GFX) $< $@ -num_tiles 57 -Wnum_tiles
+
+# Gunk's follower sprites: six 32x32 frames per species
+graphics/gunk_followers/%/overworld.4bpp: graphics/gunk_followers/%/overworld.png
+	$(GFX) $< $@ -mwidth 4 -mheight 4

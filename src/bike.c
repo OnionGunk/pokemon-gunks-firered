@@ -6,6 +6,7 @@
 #include "fieldmap.h"
 #include "field_camera.h"
 #include "overworld.h"
+#include "gunk_follower.h"
 #include "constants/map_types.h"
 #include "constants/songs.h"
 
@@ -20,6 +21,7 @@ static void BikeTransition_TurnDirection(u8);
 static void BikeTransition_MoveDirection(u8);
 static void BikeTransition_Downhill(u8);
 static void BikeTransition_Uphill(u8);
+static bool8 CanBikeSwapWithFollower(u8 direction, u8 collision);
 static u8 BikeInputHandler_Normal(u8 *, u16, u16);
 static u8 BikeInputHandler_Turning(u8 *, u16, u16);
 static u8 BikeInputHandler_Slope(u8 *, u16, u16);
@@ -172,8 +174,9 @@ static void BikeTransition_MoveDirection(u8 direction)
     else
     {
         u8 collision = GetBikeCollision(direction);
+        bool8 swap = CanBikeSwapWithFollower(direction, collision);
 
-        if (collision > COLLISION_NONE && collision <= COLLISION_ISOLATED_HORIZONTAL_RAIL)
+        if (collision > COLLISION_NONE && collision <= COLLISION_ISOLATED_HORIZONTAL_RAIL && !swap)
         {
             if (collision == COLLISION_LEDGE_JUMP)
                 PlayerJumpLedge(direction);
@@ -185,13 +188,14 @@ static void BikeTransition_MoveDirection(u8 direction)
         }
         else
         {
-            
             if (collision == COLLISION_COUNT)
                 PlayerWalkFast(direction);
             else if (PlayerIsMovingOnRockStairs(direction))
                 PlayerWalkFast(direction);
             else
                 PlayerRideWaterCurrent(direction);
+            if (swap)
+                StartFollowerSwapStep(direction);
         }
     }
 }
@@ -199,17 +203,45 @@ static void BikeTransition_MoveDirection(u8 direction)
 static void BikeTransition_Downhill(u8 v)
 {
     u8 collision = GetBikeCollision(DIR_SOUTH);
+    bool8 swap = CanBikeSwapWithFollower(DIR_SOUTH, collision);
 
-    if (collision == COLLISION_NONE)
+    if (collision == COLLISION_NONE || swap)
+    {
         PlayerWalkFaster(DIR_SOUTH);
+        if (swap)
+            StartFollowerSwapStep(DIR_SOUTH);
+    }
     else if (collision == COLLISION_LEDGE_JUMP)
         PlayerJumpLedge(DIR_SOUTH);
 }
 
 static void BikeTransition_Uphill(u8 direction)
 {
-    if (GetBikeCollision(direction) == COLLISION_NONE)
+    u8 collision = GetBikeCollision(direction);
+    bool8 swap = CanBikeSwapWithFollower(direction, collision);
+
+    if (collision == COLLISION_NONE || swap)
+    {
         PlayerWalkNormal(direction);
+        if (swap)
+            StartFollowerSwapStep(direction);
+    }
+}
+
+// Gunk's follower: riding into it swaps places, unless its tile forbids the bike (src/gunk_follower.c)
+static bool8 CanBikeSwapWithFollower(u8 direction, u8 collision)
+{
+    struct ObjectEvent *playerObjEvent = &gObjectEvents[gPlayerAvatar.objectEventId];
+    s16 x, y;
+
+    if (collision != COLLISION_OBJECT_EVENT)
+        return FALSE;
+    x = playerObjEvent->currentCoords.x;
+    y = playerObjEvent->currentCoords.y;
+    MoveCoords(direction, &x, &y);
+    if (MetatileBehaviorForbidsBiking(MapGridGetMetatileBehaviorAt(x, y)))
+        return FALSE;
+    return CanPlayerSwapWithFollower(direction);
 }
 
 static u8 GetBikeCollision(u8 direction)

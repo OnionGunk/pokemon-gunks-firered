@@ -105,6 +105,7 @@ void ObjectEventTurn(struct ObjectEvent *, u8);
 void ObjectEventTurnByLocalIdAndMap(u8, u8, u8, u8);
 void ObjectEventForceSetHeldMovement(struct ObjectEvent *, u8);
 const struct ObjectEventGraphicsInfo *GetObjectEventGraphicsInfo(u8);
+bool8 SetGunkFollowerGraphics(u16 species, bool8 shiny);
 void SetObjectInvisibility(u8 localId, u8 mapNum, u8 mapGroup, u8 state);
 void FreeAndReserveObjectSpritePalettes(void);
 void SetObjectPositionByLocalIdAndMap(u8 localId, u8 mapNum, u8 mapGroup, s16 x, s16 y);
