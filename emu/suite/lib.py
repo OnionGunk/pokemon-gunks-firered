@@ -131,10 +131,13 @@ class Game:
     def dialog_cb(self):
         return self.u32(self.a("sSaveDialogCB")) & ~1
 
-    def save(self, crash_after=None):
+    def save(self, crash_after=None, before_save=None):
         """Save through the Start menu. crash_after=N power-cycles N frames after the flash write starts
-        (returns then, without waiting for the save to finish). Returns the frames the write took."""
+        (returns then, without waiting for the save to finish). before_save() runs with the yes/no box up, just
+        before the save is confirmed (tests use it to edit what gets saved). Returns the frames the write took."""
         self.open_save_dialog()
+        if before_save is not None:
+            before_save()
         do_save = self.a("SaveDialogCB_DoSave")
         for _ in range(400):
             if self.dialog_cb() == do_save:
