@@ -12,7 +12,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import FLASH_SIZE, Game  # noqa: E402
+from lib import FLASH_SIZE, Game, decode_mon, encode_mon_evs  # noqa: E402
 
 ERASED = b"\xff" * FLASH_SIZE
 GUNK_TEST_MAGIC = 0x4B4E5547
@@ -23,6 +23,7 @@ ITEM = {"REPEL": 86, "RARE_CANDY": 68, "PROTEIN": 64, "TM01": 289, "HM01": 339, 
         "EXP_ALL": 53, "DEXNAV": 54, "POTION": 13, "POKE_BALL": 4}
 FLAG_SYS_B_DASH = 0x82F
 FLAG_GUNK_ENDLESS_REPEL_ON = 0x4A7
+FLAG_GUNK_EXP_ALL_ON = 0x4A8
 MAP_ROUTE1 = (3, 19)
 SB1_REGISTERED_ITEM = 0x296
 VAR_REPEL_STEP_COUNT = 0x4020
@@ -233,6 +234,108 @@ class Features:
         self.record("dexnav", active == 1 and battle, f"searched species {species} at ({sx - 7},{sy - 7}); "
                     f"battle {battle}")
 
+    def finish_battle(self, max_presses=80):
+        """FIGHT, first move, then A through the messages until the field is back."""
+        g = self.g
+        g.cmd("wait 250", "press A 4", "wait 40", "press A 4", "wait 20")
+        for i in range(max_presses):
+            if not self.in_battle() and g.field_ready():
+                return True
+            g.cmd("press A 4", "wait 20")
+            if i == 6:
+                self.shot("battle_text.png")
+        return False
+
+    def party_level(self, slot):
+        return self.g.u8(self.g.a("gPlayerParty") + slot * 100 + 0x54)
+
+    def check_exp_all_battle(self):
+        """A DexNav battle with INSTANT text; the level-1 Bulbasaur in slot 2 never battles and still levels up."""
+        g = self.g
+        g.cmd(f"write8 {self.sb2() + SB2_OPTIONS} {(g.u8(self.sb2() + SB2_OPTIONS) & ~7) | 3}")
+        before = self.party_level(1)
+        done = self.finish_battle()
+        after = self.party_level(1)
+        self.shot("after_battle.png")
+        self.record("exp all", done and after > before, f"slot 2 level {before} -> {after}, back in the field {done}")
+
+    # --- menus ---
+    def startmenu(self, option):
+        """Open the Start menu and choose an entry (enum StartMenuOption: 1 POKEMON, 2 BAG, 4 SAVE...)."""
+        g = self.g
+        g.cmd("press Start 4", "wait 30")
+        n = g.u8(g.a("sNumStartMenuItems"))
+        order = bytes.fromhex(g.cmd(f"read {g.a('sStartMenuOrder')} {n}")[0].replace(" ", ""))
+        target = order.index(option)
+        for _ in range(10):
+            pos = g.u8(g.a("sStartMenuCursorPos"))
+            if pos == target:
+                break
+            g.cmd("press Down 4" if pos < target else "press Up 4", "wait 6")
+        g.cmd("press A 4", "wait 90")
+
+    def back_to_field(self, button="B", max_presses=40):
+        for _ in range(max_presses):
+            if self.g.field_ready():
+                return True
+            self.g.cmd(f"press {button} 4", "wait 30")
+        return False
+
+    def mon(self, slot):
+        raw = bytes.fromhex(self.g.cmd(f"read {self.g.a('gPlayerParty') + slot * 100} 100")[0].replace(" ", ""))
+        return decode_mon(raw)
+
+    def set_evs(self, slot, evs):
+        addr = self.g.a("gPlayerParty") + slot * 100
+        raw = bytes.fromhex(self.g.cmd(f"read {addr} 100")[0].replace(" ", ""))
+        path = self.path("_mon.bin")
+        open(path, "wb").write(encode_mon_evs(raw, evs))
+        self.g.cmd(f"poke EWRAM {addr - 0x02000000} {path}")
+
+    def use_first_item_on(self, slot, name):
+        """BAG (ITEMS pocket, first item) -> USE -> party slot; then A through its messages."""
+        g = self.g
+        self.startmenu(2)
+        g.cmd("wait 60")
+        for _ in range(8):  # A on the item opens its menu, A on USE opens the party menu
+            if (g.u32(g.a("gMain") + 4) & ~1) == g.a("CB2_UpdatePartyMenu"):
+                break
+            g.cmd("press A 4", "wait 40")
+        g.cmd("wait 30")
+        for _ in range(8):  # the party menu remembers its cursor: move until gPartyMenu.slotId is the slot
+            cur = g.u8(g.a("gPartyMenu") + 9)
+            if cur == slot:
+                break
+            g.cmd("press Down 4" if cur < slot else "press Up 4", "wait 10")
+        g.cmd("press A 4", "wait 60")
+        self.shot(name)
+
+    def check_kadabra(self):
+        g = self.g
+        self.use_first_item_on(0, "candy.png")
+        for _ in range(60):
+            g.cmd("press A 4", "wait 30")
+            if g.field_ready():
+                break
+        self.back_to_field()
+        species = self.mon(0)["species"]
+        self.record("trade evolution by level", species == SPECIES["ALAKAZAM"],
+                    f"Kadabra 35 + Rare Candy -> species {species} (65 = Alakazam)")
+
+    def check_vitamins(self):
+        """Bulbasaur (slot 1) with 240 Attack EVs: Protein -> 250, Protein -> 252, a third one does nothing."""
+        g = self.g
+        self.set_evs(1, [0, 240, 0, 0, 0, 0])
+        seen = []
+        for i in range(3):
+            self.use_first_item_on(1, f"protein{i}.png")
+            g.cmd("press A 4", "wait 30", "press A 4", "wait 30")
+            self.back_to_field()
+            seen.append(self.mon(1)["evs"][1])
+        left = self.bag_count(ITEM["PROTEIN"])
+        self.record("vitamins to 252", seen == [250, 252, 252] and left == 1,
+                    f"Attack EVs after each Protein {seen}, Proteins left {left}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -245,8 +348,9 @@ def main():
         f.check_text_speed_default()
         f.check_follower()
         f.check_repel_prompt()
-        f.new_game(mons=[(SPECIES["PIKACHU"], 100)], items=[(ITEM["DEXNAV"], 1)],
-                   flags=[FLAG_SYS_B_DASH, FLAG_GUNK_ENDLESS_REPEL_ON], name="route1")
+        f.new_game(mons=[(SPECIES["PIKACHU"], 100), (SPECIES["BULBASAUR"], 1)],
+                   items=[(ITEM["DEXNAV"], 1), (ITEM["EXP_ALL"], 1)],
+                   flags=[FLAG_SYS_B_DASH, FLAG_GUNK_ENDLESS_REPEL_ON, FLAG_GUNK_EXP_ALL_ON], name="route1")
         f.warp(*MAP_ROUTE1, 4, 18, name="route1_warp")
         f.check_auto_run_outdoors()
         f.walk_to(15, 23)
@@ -254,6 +358,11 @@ def main():
         f.check_endless_repel()
         f.walk_to(15, 23)
         f.check_dexnav()
+        f.check_exp_all_battle()
+        f.new_game(mons=[(SPECIES["KADABRA"], 35), (SPECIES["BULBASAUR"], 5)],
+                   items=[(ITEM["RARE_CANDY"], 1), (ITEM["PROTEIN"], 3)], name="menus")
+        f.check_kadabra()
+        f.check_vitamins()
     finally:
         import emu
         emu.stop()

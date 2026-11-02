@@ -176,3 +176,39 @@ class Game:
 
     def reboot(self):
         self.cmd("reboot")
+
+
+# Gen 3 Pokemon data (struct BoxPokemon): personality @0, otId @4, then 48 encrypted bytes @0x20 in four 12-byte
+# substructures (growth, attacks, EVs/condition, misc) whose order depends on personality % 24.
+SUBSTRUCT_ORDERS = ["GAEM", "GAME", "GEAM", "GEMA", "GMAE", "GMEA", "AGEM", "AGME", "AEGM", "AEMG", "AMGE", "AMEG",
+                    "EGAM", "EGMA", "EAGM", "EAMG", "EMGA", "EMAG", "MGAE", "MGEA", "MAGE", "MAEG", "MEGA", "MEAG"]
+
+
+def decode_mon(raw):
+    """dict with species, item, exp, moves, evs, ivs (list) from 80+ bytes of a party/box Pokemon."""
+    pid, otid = struct.unpack_from("<II", raw, 0)
+    key = pid ^ otid
+    enc = raw[0x20:0x50]
+    dec = b"".join(struct.pack("<I", struct.unpack_from("<I", enc, i)[0] ^ key) for i in range(0, 48, 4))
+    order = SUBSTRUCT_ORDERS[pid % 24]
+    sub = {c: dec[i * 12:(i + 1) * 12] for i, c in enumerate(order)}
+    species, item, exp = struct.unpack_from("<HHI", sub["G"], 0)
+    moves = list(struct.unpack_from("<HHHH", sub["A"], 0))
+    evs = list(sub["E"][0:6])
+    ivword = struct.unpack_from("<I", sub["M"], 4)[0]
+    ivs = [(ivword >> (5 * i)) & 31 for i in range(6)]
+    return {"pid": pid, "species": species, "item": item, "exp": exp, "moves": moves, "evs": evs, "ivs": ivs}
+
+
+def encode_mon_evs(raw, evs):
+    """raw (bytes of a party/box Pokemon) with its six EVs replaced and the checksum fixed."""
+    raw = bytearray(raw)
+    pid, otid = struct.unpack_from("<II", raw, 0)
+    key = pid ^ otid
+    dec = bytearray(b"".join(struct.pack("<I", struct.unpack_from("<I", raw, 0x20 + i)[0] ^ key) for i in range(0, 48, 4)))
+    e = SUBSTRUCT_ORDERS[pid % 24].index("E")
+    dec[e * 12:e * 12 + 6] = bytes(evs)
+    struct.pack_into("<H", raw, 0x1C, sum(struct.unpack_from("<24H", dec)) & 0xFFFF)
+    for i in range(0, 48, 4):
+        struct.pack_into("<I", raw, 0x20 + i, struct.unpack_from("<I", dec, i)[0] ^ key)
+    return bytes(raw)
