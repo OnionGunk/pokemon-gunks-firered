@@ -34,6 +34,12 @@ ITEM_TM09 = 297
 ITEM_HM01 = 339
 SB1_BAG_TMHM = 0x0464
 MOVE_BULLET_SEED = 331
+ITEM_BICYCLE = 360
+ITEM_TOWN_MAP = 361
+SB1_BAG_KEY = 0x03B8
+ITEM_METAL_COAT = 199
+SPECIES_STEELIX = 208
+FLAG_SYS_NATIONAL_DEX = 0x840
 SB1_REGISTERED_ITEM = 0x296
 VAR_REPEL_STEP_COUNT = 0x4020
 VAR_GUNK_LAST_REPEL = 0x4029
@@ -406,6 +412,66 @@ class Features:
         self.record("follower palette after a menu", back and slot is not None and slot >= 12,
                     f"back in the field {back}, follower palette slot {slot}")
 
+    def pocket_ids(self, offset, slots):
+        data = bytes.fromhex(self.g.cmd(f"read {self.sb1() + offset} {slots * 4}")[0].replace(" ", ""))
+        return [struct.unpack_from("<H", data, i * 4)[0] for i in range(slots)]
+
+    def check_bag_sort(self):
+        """ITEMS pocket holds REPEL then POTION (the order they were added); START sorts it to POTION, REPEL."""
+        g = self.g
+        before = [i for i in self.pocket_ids(SB1_BAG_ITEMS, 4) if i]
+        self.startmenu(2)
+        g.cmd("wait 60", "press Start 4", "wait 30")
+        self.shot("bag_sorted.png")
+        after = [i for i in self.pocket_ids(SB1_BAG_ITEMS, 4) if i]
+        self.back_to_field()
+        self.record("bag sort", before == [ITEM["REPEL"], ITEM["POTION"]] and after == [ITEM["POTION"], ITEM["REPEL"]],
+                    f"ITEMS pocket {before} -> {after}")
+
+    def check_two_registered_items(self):
+        """Register the BICYCLE, then the TOWN MAP: SELECT has the TOWN MAP, R the BICYCLE (it mounts it)."""
+        g = self.g
+        self.startmenu(2)
+        g.cmd("wait 60", "press Right 4", "wait 40")
+        for _ in range(2):  # first row (BICYCLE), then the second (TOWN MAP): A, REGISTER
+            g.cmd("press A 4", "wait 40", "press Down 4", "wait 10", "press A 4", "wait 40")
+            g.cmd("press Down 4", "wait 20")
+        self.shot("registered.png")
+        self.back_to_field()
+        sel = self.u16(self.sb1() + SB1_REGISTERED_ITEM)
+        second = self.var(0x402A)
+        g.cmd("press R 4", "wait 90")
+        self.shot("r_button.png")
+        on_bike = g.u8(g.a("gPlayerAvatar")) & 0x06
+        self.record("two registered items", sel == ITEM_TOWN_MAP and second == ITEM_BICYCLE and on_bike != 0,
+                    f"SELECT {sel}, R {second}, on the bike after R: {on_bike != 0}")
+
+    def set_flag(self, flag):
+        a = self.sb1() + SB1_FLAGS + flag // 8
+        self.g.cmd(f"write8 {a} {self.g.u8(a) | (1 << (flag % 8))}")
+
+    def check_trade_item_as_stone(self):
+        """Onix + Metal Coat used from the bag: no effect before the National Dex (vanilla's rule for Gen 2
+        targets); after it, Onix becomes Steelix and the Coat is used up."""
+        g = self.g
+        self.use_first_item_on(0, "coat_no_dex.png")
+        for _ in range(6):
+            g.cmd("press A 4", "wait 40")
+        self.back_to_field()
+        before = (self.mon(0)["species"], self.bag_count(ITEM_METAL_COAT))
+        g.cmd(f"write8 {self.sb2() + 0x18 + 3} 185")
+        self.set_var(0x404E, 0x6258)
+        self.set_flag(FLAG_SYS_NATIONAL_DEX)
+        self.use_first_item_on(0, "coat_dex.png")
+        for _ in range(60):
+            g.cmd("press A 4", "wait 30")
+            if g.field_ready():
+                break
+        self.back_to_field()
+        after = (self.mon(0)["species"], self.bag_count(ITEM_METAL_COAT))
+        self.record("trade item as a stone", before == (SPECIES["ONIX"], 1) and after == (SPECIES_STEELIX, 0),
+                    f"without the National Dex (species, coats) {before}, with it {after}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -441,6 +507,15 @@ def main():
         f.new_game(mons=[(SPECIES["BULBASAUR"], 20)], flags=[FLAG_SYS_POKEMON_GET], name="pc")
         f.warp(5, 4, 11, 2, name="pc_warp")
         f.check_pc_move_tutor()
+        f.new_game(mons=[(SPECIES["BULBASAUR"], 5)],
+                   items=[(ITEM["REPEL"], 1), (ITEM["POTION"], 1), (ITEM_BICYCLE, 1), (ITEM_TOWN_MAP, 1)],
+                   flags=[FLAG_SYS_POKEMON_GET], name="bag")
+        f.check_bag_sort()
+        f.warp(*MAP_ROUTE1, 4, 18, name="bag_warp")
+        f.check_two_registered_items()
+        f.new_game(mons=[(SPECIES["ONIX"], 20)], items=[(ITEM_METAL_COAT, 1)], flags=[FLAG_SYS_POKEMON_GET],
+                   name="coat")
+        f.check_trade_item_as_stone()
     finally:
         import emu
         emu.stop()
