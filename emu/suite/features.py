@@ -25,6 +25,15 @@ FLAG_SYS_B_DASH = 0x82F
 FLAG_GUNK_ENDLESS_REPEL_ON = 0x4A7
 FLAG_GUNK_EXP_ALL_ON = 0x4A8
 MAP_ROUTE1 = (3, 19)
+MAP_ROUTE2 = (3, 20)
+FLAG_BADGE01_GET = 0x820
+FLAG_BADGE02_GET = 0x821
+FLAG_SYS_POKEMON_GET = 0x828
+ITEM_TM_CASE = 364
+ITEM_TM09 = 297
+ITEM_HM01 = 339
+SB1_BAG_TMHM = 0x0464
+MOVE_BULLET_SEED = 331
 SB1_REGISTERED_ITEM = 0x296
 VAR_REPEL_STEP_COUNT = 0x4020
 VAR_GUNK_LAST_REPEL = 0x4029
@@ -336,6 +345,33 @@ class Features:
         self.record("vitamins to 252", seen == [250, 252, 252] and left == 1,
                     f"Attack EVs after each Protein {seen}, Proteins left {left}")
 
+    def check_tm_reusable(self):
+        """TM Case -> TM09 (HM01 is listed first) -> teach Bulbasaur Bullet Seed; TM09 stays in the case."""
+        g = self.g
+        self.startmenu(2)
+        g.cmd("wait 60", "press Right 4", "wait 40", "press A 4", "wait 40", "press A 4", "wait 90",
+              "press Down 4", "wait 20", "press A 4", "wait 40", "press A 4", "wait 90")
+        for _ in range(6):
+            g.cmd("press A 4", "wait 60")
+        self.back_to_field()
+        moves = self.mon(0)["moves"]
+        left = self.bag_count(ITEM_TM09, SB1_BAG_TMHM, 58)
+        self.record("reusable TMs", MOVE_BULLET_SEED in moves and left == 1, f"moves {moves}, TM09 left {left}")
+
+    def check_hm_without_teaching(self):
+        """Route 2's Cut tree: Bulbasaur doesn't know Cut, but HM01 is in the bag and the badge is set."""
+        g = self.g
+        before = self.mon(0)["moves"]
+        g.cmd("press Up 2", "wait 20", "press A 4", "wait 60")
+        self.shot("cut_prompt.png")
+        for _ in range(8):
+            g.cmd("press A 4", "wait 60")
+        self.back_to_field()
+        g.cmd("press Up 16", "wait 20")
+        x, y = self.pos()
+        self.shot("cut_done.png")
+        self.record("HM without teaching", y == 62 and 15 not in before, f"stood at ({x},{y}) after cutting (tree at 16,62)")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -363,6 +399,11 @@ def main():
                    items=[(ITEM["RARE_CANDY"], 1), (ITEM["PROTEIN"], 3)], name="menus")
         f.check_kadabra()
         f.check_vitamins()
+        f.new_game(mons=[(SPECIES["BULBASAUR"], 5)], items=[(ITEM_TM_CASE, 1), (ITEM_TM09, 1), (ITEM_HM01, 1)],
+                   flags=[FLAG_BADGE01_GET, FLAG_BADGE02_GET, FLAG_SYS_POKEMON_GET], name="tmhm")
+        f.check_tm_reusable()
+        f.warp(*MAP_ROUTE2, 16, 63, name="route2_warp")
+        f.check_hm_without_teaching()
     finally:
         import emu
         emu.stop()
