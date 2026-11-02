@@ -31,6 +31,7 @@
 #include "constants/items.h"
 #include "constants/maps.h"
 #include "constants/songs.h"
+#include "gunk_dexnav.h"
 #include "constants/pokemon.h"
 #include "constants/trainers.h"
 
@@ -421,6 +422,7 @@ static void StartPokedudeBattle(void)
 
 static void CB2_EndWildBattle(void)
 {
+    Gunk_DexNavOnBattleEnd();
     CpuFill16(0, (void *)BG_PLTT, BG_PLTT_SIZE);
     ResetOamRange(0, 128);
     if (IsPlayerDefeated(gBattleOutcome) == TRUE)

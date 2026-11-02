@@ -26,6 +26,8 @@
 #include "quest_log.h"
 #include "region_map.h"
 #include "script.h"
+#include "safari_zone.h"
+#include "event_scripts.h"
 #include "strings.h"
 #include "task.h"
 #include "teachy_tv.h"
@@ -386,6 +388,24 @@ void FieldUseFunc_EndlessRepel(u8 taskId)
 void FieldUseFunc_ExpAll(u8 taskId)
 {
     ToggleKeyItemFlag(taskId, FLAG_GUNK_EXP_ALL_ON, gText_ExpAllOn, gText_ExpAllOff);
+}
+
+// Gunk's DexNav: back to the field, then data/scripts/gunk_dexnav.inc shows the list
+static void ItemUseOnFieldCB_DexNav(u8 taskId)
+{
+    ScriptContext_SetupScript(EventScript_GunkDexNav);
+    DestroyTask(taskId);
+}
+
+void FieldUseFunc_DexNav(u8 taskId)
+{
+    if (GetSafariZoneFlag())
+    {
+        PrintNotTheTimeToUseThat(taskId, gTasks[taskId].data[3]);
+        return;
+    }
+    sItemUseOnFieldCB = ItemUseOnFieldCB_DexNav;
+    SetUpItemUseOnFieldCallback(taskId);
 }
 
 // Gunk's: special for the Repel prompt (data/scripts/repel.inc), after the script took the Repel from the bag

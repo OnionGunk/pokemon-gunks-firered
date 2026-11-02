@@ -25,6 +25,7 @@ void FieldUseFunc_TeachyTv(u8 taskId);
 void FieldUseFunc_Repel(u8 taskId);
 void FieldUseFunc_EndlessRepel(u8 taskId);
 void FieldUseFunc_ExpAll(u8 taskId);
+void FieldUseFunc_DexNav(u8 taskId);
 void Gunk_RestartRepel(void);
 void FieldUseFunc_BlackWhiteFlute(u8 taskId);
 void FieldUseFunc_TownMap(u8 taskId);

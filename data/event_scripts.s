@@ -1347,6 +1347,7 @@ Text_TestMsg::
 	.include "data/scripts/flash.inc"
 	.include "data/scripts/repel.inc"
 	.include "data/scripts/gunk_key_items.inc"
+	.include "data/scripts/gunk_dexnav.inc"
 	.include "data/scripts/safari_zone.inc"
 	.include "data/text/safari_zone.inc"
 	.include "data/text/competitive_brothers.inc"

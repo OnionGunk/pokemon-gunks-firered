@@ -13,6 +13,7 @@
 #include "field_poison.h"
 #include "field_specials.h"
 #include "item_menu.h"
+#include "gunk_dexnav.h"
 #include "link.h"
 #include "wonder_news.h"
 #include "metatile_behavior.h"
@@ -741,6 +742,8 @@ void RestartWildEncounterImmunitySteps(void)
 
 static bool8 CheckStandardWildEncounter(u32 metatileAttributes)
 {
+    if (Gunk_DexNavTryStartBattle())
+        return TRUE;
     return TryStandardWildEncounter(metatileAttributes);
 }
 

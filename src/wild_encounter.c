@@ -573,6 +573,45 @@ u16 GetLocalWaterMon(void)
     return SPECIES_NONE;
 }
 
+// Gunk's DexNav (src/gunk_dexnav.c): the current map's grass Pokemon, or NULL
+const struct WildPokemonInfo *Gunk_GetLandMonsInfo(void)
+{
+    u16 headerId = GetCurrentMapWildMonHeaderId();
+
+    if (headerId == HEADER_NONE)
+        return NULL;
+    return gWildMonHeaders[headerId].landMonsInfo;
+}
+
+// Gunk's DexNav: one normal wild roll restricted to <species>. The slot comes from the usual slot odds (redrawn
+// until it holds <species>), then its level and the Pokemon are made exactly as for a random encounter.
+bool8 Gunk_GenerateLandMonOfSpecies(u16 species)
+{
+    const struct WildPokemonInfo *info = Gunk_GetLandMonsInfo();
+    u8 slot, tries;
+
+    if (info == NULL)
+        return FALSE;
+    for (tries = 0; tries < 100; tries++)
+    {
+        slot = ChooseWildMonIndex_Land();
+        if (info->wildPokemon[slot].species == species)
+            break;
+    }
+    if (tries == 100)
+    {
+        for (slot = 0; slot < LAND_WILD_COUNT; slot++)
+        {
+            if (info->wildPokemon[slot].species == species)
+                break;
+        }
+        if (slot == LAND_WILD_COUNT)
+            return FALSE;
+    }
+    GenerateWildMon(species, ChooseWildMonLevel(&info->wildPokemon[slot]), slot);
+    return TRUE;
+}
+
 bool8 UpdateRepelCounter(void)
 {
     u16 steps;

@@ -51,6 +51,7 @@
 #include "constants/event_objects.h"
 #include "constants/maps.h"
 #include "constants/region_map_sections.h"
+#include "gunk_dexnav.h"
 #include "constants/songs.h"
 #include "constants/sound.h"
 
@@ -1453,7 +1454,10 @@ void CB1_Overworld(void)
         if (QL_GetPlaybackState() == QL_PLAYBACK_STATE_RUNNING || gQuestLogState == QL_STATE_PLAYBACK)
             DoCB1_Overworld_QuestLogPlayback();
         else
+        {
             DoCB1_Overworld(gMain.newKeys, gMain.heldKeys);
+            Gunk_DexNavUpdate();
+        }
     }
 }
 

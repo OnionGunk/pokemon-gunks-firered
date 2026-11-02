@@ -454,4 +454,6 @@ gSpecials::
 	def_special CreateEnemyEventMon
 	def_special Gunk_RestartRepel  @ Gunk's
 	def_special Gunk_TranslatePCMenuResult  @ Gunk's
+	def_special Gunk_DexNavPrepareList  @ Gunk's
+	def_special Gunk_DexNavStartSearch  @ Gunk's
 gSpecialsEnd::

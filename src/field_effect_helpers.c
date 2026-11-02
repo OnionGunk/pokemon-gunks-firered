@@ -809,7 +809,7 @@ u32 FldEff_UnusedGrass(void)
         sprite->oam.priority = gFieldEffectArguments[3];
         sprite->data[0] = FLDEFF_UNUSED_GRASS;
     }
-    return 0;
+    return spriteId; // Gunk's DexNav keeps the patch's sprite id (vanilla returned 0; nothing used it)
 }
 
 u32 FldEff_UnusedGrass2(void)
