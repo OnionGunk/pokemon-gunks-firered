@@ -1215,7 +1215,8 @@ bool8 PartyHasMonWithSurf(void)
         {
             if (GetMonData(&gPlayerParty[i], MON_DATA_SPECIES) == SPECIES_NONE)
                 break;
-            if (MonKnowsMove(&gPlayerParty[i], MOVE_SURF))
+            // Gunk's: or could learn it from the HM in the bag (src/party_menu.c)
+            if (MonKnowsMove(&gPlayerParty[i], MOVE_SURF) || Gunk_CanUseHMMoveWithoutKnowing(&gPlayerParty[i], MOVE_SURF))
                 return TRUE;
         }
     }

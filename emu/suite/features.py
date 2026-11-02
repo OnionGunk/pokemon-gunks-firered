@@ -40,6 +40,9 @@ SB1_BAG_KEY = 0x03B8
 ITEM_METAL_COAT = 199
 SPECIES_STEELIX = 208
 FLAG_SYS_NATIONAL_DEX = 0x840
+SPECIES_LAPRAS = 131
+ITEM_HM03 = 341
+FLAG_BADGE05_GET = 0x824
 SB1_REGISTERED_ITEM = 0x296
 VAR_REPEL_STEP_COUNT = 0x4020
 VAR_GUNK_LAST_REPEL = 0x4029
@@ -547,6 +550,50 @@ class Features:
         self.shot("mom_after.png")
         self.record("Mom gives the key items", items == [1, 1, 1], f"Endless Repel, Exp. All, DexNav {items}")
 
+    def follower_pos(self):
+        g = self.g
+        objs = g.a("gObjectEvents")
+        for i in range(16):
+            raw = bytes.fromhex(g.cmd(f"read {objs + i * 0x24} 0x14")[0].replace(" ", ""))
+            if raw[0] & 1 and raw[8] == 254:
+                x, y = struct.unpack_from("<hh", raw, 0x10)
+                return x - 7, y - 7
+        return None
+
+    def check_follower_surf(self):
+        """Lapras (no Surf; HM03 in the bag) surfs off Pallet Town's shore: the follower stays on land, and
+        is back beside the player after landing."""
+        g = self.g
+        g.cmd("press Down 2", "wait 20", "press A 4", "wait 60")
+        g.wait_field(press="A", max_steps=60, settle=4)
+        g.cmd("wait 60", "press Down 16", "wait 20", "press Down 16", "wait 30")
+        surfing = g.u8(g.a("gPlayerAvatar")) & 0x08
+        on_water = self.pos()
+        follower_while = self.follower_pos()
+        self.shot("surf.png")
+        g.cmd("press Up 16", "wait 20", "press Up 16", "wait 60", "press Up 16", "wait 120")
+        landed = self.pos()
+        follower_after = self.follower_pos()
+        self.shot("surf_landed.png")
+        ok = surfing and follower_while is not None and follower_while[1] <= 16 and landed[1] <= 16             and follower_after is not None and abs(follower_after[0] - landed[0]) + abs(follower_after[1] - landed[1]) <= 3
+        self.record("follower and Surf", ok, f"surfing {surfing != 0} at {on_water}, follower at {follower_while}; "
+                    f"landed at {landed}, follower at {follower_after}")
+
+    def check_follower_map_edge(self):
+        """Walk north out of Pallet Town into Route 1: the follower crosses the map edge behind the player."""
+        g = self.g
+        self.set_var(0x4050, 3)  # VAR_MAP_SCENE_PALLET_TOWN_OAK: Oak's Route 1 scene is over
+        self.walk_to(12, 2)
+        for _ in range(8):
+            g.cmd("press Up 16", "wait 10")
+        g.cmd("wait 60")
+        sb1 = self.sb1()
+        where = (g.u8(sb1 + 4), g.u8(sb1 + 5))
+        p, fp = self.pos(), self.follower_pos()
+        self.shot("map_edge.png")
+        near = fp is not None and abs(fp[0] - p[0]) + abs(fp[1] - p[1]) <= 3
+        self.record("follower across a map edge", where == MAP_ROUTE1 and near, f"map {where}, player {p}, follower {fp}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -602,6 +649,11 @@ def main():
         f.new_game(mons=[(SPECIES["BULBASAUR"], 12)], flags=[FLAG_SYS_POKEMON_GET, FLAG_SYS_B_DASH, 0x258], name="mom")
         f.warp(4, 0, 8, 5, name="mom_warp")
         f.check_mom_gift()
+        f.new_game(mons=[(SPECIES_LAPRAS, 30)], items=[(ITEM_HM03, 1)],
+                   flags=[FLAG_SYS_POKEMON_GET, FLAG_BADGE05_GET], name="surf")
+        f.warp(3, 0, 8, 16, name="surf_warp")
+        f.check_follower_surf()
+        f.check_follower_map_edge()
     finally:
         import emu
         emu.stop()
