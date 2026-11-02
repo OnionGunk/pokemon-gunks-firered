@@ -1,4 +1,5 @@
 #include "global.h"
+#include "gunk_test.h"
 #include "gflib.h"
 #include "random.h"
 #include "overworld.h"
@@ -149,6 +150,7 @@ void NewGameInitData(void)
     RunScriptImmediately(EventScript_ResetAllMapFlags);
     StringCopy(gSaveBlock1Ptr->rivalName, rivalName);
     ResetTrainerTowerResults();
+    Gunk_ApplyTestSetup();
 }
 
 static void ResetMiniGamesResults(void)
