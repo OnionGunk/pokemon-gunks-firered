@@ -514,6 +514,34 @@ class Features:
         self.record("story opening", scene == 4 and slot is not None and species == SPECIES["BULBASAUR"],
                     f"lab scene var {scene}, starter species {species}, follower palette slot {slot}")
 
+    def clear_flag(self, flag):
+        a = self.sb1() + SB1_FLAGS + flag // 8
+        self.g.cmd(f"write8 {a} {self.g.u8(a) & ~(1 << (flag % 8)) & 0xFF}")
+
+    def key_items_given(self):
+        return [self.bag_count(i, SB1_BAG_KEY, 30) for i in (ITEM["ENDLESS_REPEL"], ITEM["EXP_ALL"], ITEM["DEXNAV"])]
+
+    def check_pewter_aide_gift(self):
+        """After Brock (scene var 1, the aide shown): the Running Shoes scene also hands over the three key items."""
+        g = self.g
+        g.cmd("press Right 16", "wait 30")
+        self.shot("pewter_aide.png")
+        g.wait_field(press="A", max_steps=600, settle=4)
+        items = self.key_items_given()
+        self.shot("pewter_after.png")
+        self.record("Pewter aide gives the key items", items == [1, 1, 1] and self.flag(FLAG_SYS_B_DASH) == 1
+                    and self.flag(0x4A9) == 1 and self.flag(FLAG_GUNK_EXP_ALL_ON) == 1,
+                    f"Endless Repel, Exp. All, DexNav {items}, Running Shoes {self.flag(FLAG_SYS_B_DASH)}")
+
+    def check_mom_gift(self):
+        """A save past Pewter without the key items (made before Gunk's): Mom heals, then gives them."""
+        g = self.g
+        g.cmd("press Up 2", "wait 20", "press A 4", "wait 40")
+        g.wait_field(press="A", max_steps=600, settle=4)
+        items = self.key_items_given()
+        self.shot("mom_after.png")
+        self.record("Mom gives the key items", items == [1, 1, 1], f"Endless Repel, Exp. All, DexNav {items}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -561,6 +589,14 @@ def main():
         f.check_trade_item_as_stone()
         f.new_game(name="story")
         f.check_story_opening()
+        f.new_game(mons=[(SPECIES["BULBASAUR"], 12)], flags=[FLAG_SYS_POKEMON_GET, FLAG_BADGE01_GET], name="pewter")
+        f.set_var(0x406C, 1)
+        f.clear_flag(0x092)
+        f.warp(3, 2, 45, 22, name="pewter_warp")
+        f.check_pewter_aide_gift()
+        f.new_game(mons=[(SPECIES["BULBASAUR"], 12)], flags=[FLAG_SYS_POKEMON_GET, FLAG_SYS_B_DASH, 0x258], name="mom")
+        f.warp(4, 0, 8, 5, name="mom_warp")
+        f.check_mom_gift()
     finally:
         import emu
         emu.stop()
