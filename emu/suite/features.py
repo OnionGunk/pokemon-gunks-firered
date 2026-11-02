@@ -372,6 +372,40 @@ class Features:
         self.shot("cut_done.png")
         self.record("HM without teaching", y == 62 and 15 not in before, f"stood at ({x},{y}) after cutting (tree at 16,62)")
 
+    def follower_palette_slot(self):
+        g = self.g
+        objs = g.a("gObjectEvents")
+        for i in range(16):
+            raw = bytes.fromhex(g.cmd(f"read {objs + i * 0x24} 12")[0].replace(" ", ""))
+            if raw[0] & 1 and raw[8] == 254:
+                sprite = g.a("gSprites") + raw[4] * 0x44
+                return self.u16(sprite + 4) >> 12
+        return None
+
+    def check_pc_move_tutor(self):
+        """A Pokemon Center PC: MOVE TUTOR -> remember -> Bulbasaur 20 (Tackle and Growl forgotten) -> Tackle."""
+        g = self.g
+        g.cmd("press Up 2", "wait 20", "press A 4", "wait 60", "press A 4", "wait 60",
+              "press Down 4", "wait 10", "press Down 4", "wait 10")
+        self.shot("pc_menu.png")
+        g.cmd("press A 4", "wait 60", "press A 4", "wait 60", "press A 4", "wait 60", "press A 4", "wait 120",
+              "press A 4", "wait 120")
+        self.shot("pc_relearner.png")
+        before = self.mon(0)["moves"]
+        g.cmd("press A 4", "wait 60")  # Tackle, the first move on the list
+        for _ in range(20):  # "forget a move?" YES, the first move, the messages (they take A only)
+            if (g.u32(g.a("gMain") + 4) & ~1) == g.a("CB2_Overworld"):
+                break
+            g.cmd("press A 4", "wait 60")
+        back = self.back_to_field()  # B on the PC menu logs off
+        g.cmd("wait 60")
+        after = self.mon(0)["moves"]
+        slot = self.follower_palette_slot()
+        self.shot("pc_after.png")
+        self.record("PC move tutor", 33 in after and 33 not in before, f"moves {before} -> {after}")
+        self.record("follower palette after a menu", back and slot is not None and slot >= 12,
+                    f"back in the field {back}, follower palette slot {slot}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -404,6 +438,9 @@ def main():
         f.check_tm_reusable()
         f.warp(*MAP_ROUTE2, 16, 63, name="route2_warp")
         f.check_hm_without_teaching()
+        f.new_game(mons=[(SPECIES["BULBASAUR"], 20)], flags=[FLAG_SYS_POKEMON_GET], name="pc")
+        f.warp(5, 4, 11, 2, name="pc_warp")
+        f.check_pc_move_tutor()
     finally:
         import emu
         emu.stop()

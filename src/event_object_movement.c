@@ -1929,6 +1929,8 @@ static void SpawnObjectEventOnReturnToField(u8 objectEventId, s16 x, s16 y)
             SetSubspriteTables(sprite, subspriteTables);
 
         sprite->oam.paletteNum = graphicsInfo->paletteSlot;
+        if (objectEvent->graphicsId == OBJ_EVENT_GFX_GUNK_FOLLOWER)
+            sprite->oam.paletteNum = LoadGunkFollowerPalette();
         sprite->coordOffsetEnabled = TRUE;
         sprite->data[0] = objectEventId;
         objectEvent->spriteId = spriteId;
@@ -1987,6 +1989,8 @@ void ObjectEventSetGraphicsId(struct ObjectEvent *objectEvent, u8 graphicsId)
     sprite->anims = graphicsInfo->anims;
     sprite->subspriteTables = graphicsInfo->subspriteTables;
     sprite->oam.paletteNum = graphicsInfo->paletteSlot;
+    if (objectEvent->graphicsId == OBJ_EVENT_GFX_GUNK_FOLLOWER)
+        sprite->oam.paletteNum = LoadGunkFollowerPalette();
     if (!sprite->usingSheet)
     {
         s32 var2;
