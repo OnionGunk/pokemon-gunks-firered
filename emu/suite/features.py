@@ -594,6 +594,48 @@ class Features:
         near = fp is not None and abs(fp[0] - p[0]) + abs(fp[1] - p[1]) <= 3
         self.record("follower across a map edge", where == MAP_ROUTE1 and near, f"map {where}, player {p}, follower {fp}")
 
+    def count_follower_objects(self):
+        g = self.g
+        objs = g.a("gObjectEvents")
+        n = 0
+        for i in range(16):
+            raw = bytes.fromhex(g.cmd(f"read {objs + i * 0x24} 12")[0].replace(" ", ""))
+            if raw[0] & 1 and (raw[8] == 254 or raw[5] == 152):
+                n += 1
+        return n
+
+    def check_follower_save_cycle(self):
+        """Save with the follower out, power-cycle, Continue: one follower, made fresh (it is never saved)."""
+        g = self.g
+        before = self.count_follower_objects()
+        g.save()
+        sb1 = self.sb1()
+        saved = 0
+        for i in range(16):
+            raw = bytes.fromhex(g.cmd(f"read {sb1 + 0x6A0 + i * 0x24} 12")[0].replace(" ", ""))
+            if raw[0] & 1 and (raw[8] == 254 or raw[5] == 152):
+                saved += 1
+        g.reboot()
+        g.boot_continue()
+        g.cmd("wait 60")
+        after = self.count_follower_objects()
+        self.shot("follower_continue.png")
+        self.record("follower and saving", before == 1 and saved == 0 and after == 1,
+                    f"follower objects before {before}, in the save block {saved}, after Continue {after}")
+
+    def check_follower_door(self):
+        """Through Oak's lab door (Pallet Town 16,13): inside, the follower is next to the player."""
+        g = self.g
+        self.walk_to(16, 14)
+        g.cmd("press Up 16", "wait 120")
+        sb1 = self.sb1()
+        where = (g.u8(sb1 + 4), g.u8(sb1 + 5))
+        g.cmd("press Up 16", "wait 30")
+        p, fp = self.pos(), self.follower_pos()
+        self.shot("door.png")
+        near = fp is not None and abs(fp[0] - p[0]) + abs(fp[1] - p[1]) <= 3
+        self.record("follower through a door", where == (4, 3) and near, f"map {where}, player {p}, follower {fp}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -654,6 +696,9 @@ def main():
         f.warp(3, 0, 8, 16, name="surf_warp")
         f.check_follower_surf()
         f.check_follower_map_edge()
+        f.check_follower_save_cycle()
+        f.warp(3, 0, 16, 15, name="door_warp")
+        f.check_follower_door()
     finally:
         import emu
         emu.stop()
