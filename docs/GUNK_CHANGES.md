@@ -30,8 +30,16 @@ suite), both run after every build. Status: **done** = in the build and checked 
 The three new key items come from Oak's aide in Pewter City with the Running Shoes, or from Mom on a save that is
 already past that ("Pewter aide gives the key items", "Mom gives the key items").
 
+## Map sweep
+
+`emu/suite/sweep.py` continues into all 397 maps outside the link rooms with a follower out: 394 reach the field
+(5 of them by way of a trainer who sees the player on arrival), and the other 3 are story scenes that are still
+playing when the sweep stops pressing A (the Hall of Fame saving, Bill on One Island, the Two Island Game Corner).
+The game keeps running in all of them. The first sweep found the cave hang fixed in "Fix a hang loading caves".
+
 ## Not done yet
 
 - Talking to the follower does nothing (vanilla would read a garbage script; it is skipped).
 - An emulator check for egg hatching.
-- A whole playthrough: the checks cover the opening, the key-item gifts and each feature, not every story scene.
+- A whole playthrough: the checks cover the opening, the key-item gifts, each feature and every map's arrival,
+  not every story scene.
