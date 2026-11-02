@@ -495,6 +495,20 @@ void ClearFollowerFromSaveBlock(void)
  * The collision check reads its elevation and the behaviour of the tile it
  * stands on, and skips it when looking for objects in the way.
  */
+/* TRUE if any warp of the current map sits on object tile (x, y) (from MinimalEffort07's field_control_avatar.c) */
+static bool8 IsWarpEventAt(s16 x, s16 y)
+{
+    s32 i;
+    const struct WarpEvent *warp = gMapHeader.events->warps;
+
+    for (i = 0; i < gMapHeader.events->warpCount; i++, warp++)
+    {
+        if (warp->x + MAP_OFFSET == x && warp->y + MAP_OFFSET == y)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 static bool8 IsFollowerWalkableTile(struct ObjectEvent *mover, s16 x, s16 y, u8 direction)
 {
     if (GetCollisionAtCoords(mover, x, y, direction) != COLLISION_NONE)

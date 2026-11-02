@@ -52,7 +52,7 @@ u8 RunHelpSystemCallback(void)
         if (JOY_NEW(R_BUTTON) && gHelpSystemToggleWithRButtonDisabled == TRUE)
             return 0;
         // Gunk's: in the field, R belongs to the second registered item when there is one (L still opens Help)
-        if (JOY_NEW(R_BUTTON) && gMain.callback2 == CB2_Overworld && VarGet(VAR_GUNK_REGISTERED_ITEM_2) != ITEM_NONE)
+        if (JOY_NEW(R_BUTTON) && gMain.callback1 == CB1_Overworld && VarGet(VAR_GUNK_REGISTERED_ITEM_2) != ITEM_NONE)
             return 0;
         if (JOY_NEW(L_BUTTON | R_BUTTON))
         {

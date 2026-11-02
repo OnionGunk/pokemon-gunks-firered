@@ -3,6 +3,7 @@
 #include "event_data.h"
 #include "event_object_movement.h"
 #include "gunk_follower.h"
+#include "field_weather.h"
 #include "field_camera.h"
 #include "field_control_avatar.h"
 #include "field_effect.h"
@@ -72,6 +73,7 @@ static void MakeObjectTemplateFromObjectEventTemplate(const struct ObjectEventTe
 static void GetObjectEventMovingCameraOffset(s16 *, s16 *);
 static const struct ObjectEventTemplate *GetObjectEventTemplateByLocalIdAndMap(u8, u8, u8);
 static void LoadObjectEventPalette(u16);
+static u8 LoadGunkFollowerPalette(void);
 static void RemoveObjectEventIfOutsideView(struct ObjectEvent *);
 static void SpawnObjectEventOnReturnToField(u8 objectEventId, s16 x, s16 y);
 static void SetPlayerAvatarObjectEventIdAndObjectId(u8, u8);

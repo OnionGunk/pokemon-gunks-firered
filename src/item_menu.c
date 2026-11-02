@@ -11,6 +11,7 @@
 #include "help_system.h"
 #include "item.h"
 #include "item_menu.h"
+#include "event_data.h"
 #include "item_menu_icons.h"
 #include "item_use.h"
 #include "link.h"

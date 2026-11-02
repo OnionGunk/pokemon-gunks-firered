@@ -1,5 +1,6 @@
 #include "global.h"
 #include "gflib.h"
+#include "battle.h"
 #include "battle_setup.h"
 #include "event_data.h"
 #include "event_object_movement.h"
