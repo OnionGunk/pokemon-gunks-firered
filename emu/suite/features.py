@@ -472,6 +472,48 @@ class Features:
         self.record("trade item as a stone", before == (SPECIES["ONIX"], 1) and after == (SPECIES_STEELIX, 0),
                     f"without the National Dex (species, coats) {before}, with it {after}")
 
+    def check_options_instant(self):
+        """OPTION: the TEXT SPEED row goes SLOW, MID, FAST, INSTANT; picking INSTANT saves speed 3."""
+        g = self.g
+        self.startmenu(5)
+        g.cmd("wait 60", "press Right 4", "wait 20")
+        self.shot("options_instant.png")
+        g.cmd("press B 4", "wait 60")
+        self.back_to_field()
+        speed = g.u8(self.sb2() + SB2_OPTIONS) & 7
+        self.record("INSTANT text option", speed == 3, f"text speed after FAST + Right: {speed}")
+
+    def check_story_opening(self):
+        """A real new game (no test setup): bedroom, Pallet Town, Oak's scene on Route 1, the starter in his lab
+        and the rival battle. Afterwards the lab's scene var is 4 and the starter follows the player."""
+        g = self.g
+
+        def mash(n):
+            return g.wait_field(press="A", max_steps=n, settle=4)
+        self.walk_to(10, 3)
+        g.cmd("press Up 16", "wait 60")          # stairs down
+        self.walk_to(4, 8)
+        g.cmd("press Down 16", "wait 120")       # out of the door
+        self.walk_to(12, 2)
+        g.cmd("press Up 16", "wait 60")          # Oak's trigger at the north edge
+        mash(900)
+        self.shot("story_lab.png")
+        self.walk_to(6, 5)
+        self.walk_to(8, 5)
+        g.cmd("press Up 2", "wait 20", "press A 4", "wait 40")  # Bulbasaur's ball
+        mash(1500)
+        g.cmd("press Down 16", "wait 30")
+        self.walk_to(6, 8)                       # the rival battle trigger
+        g.cmd("press Down 16", "wait 30")
+        for _ in range(3):
+            mash(1500)
+        self.shot("story_after_rival.png")
+        scene = self.var(0x4055)
+        slot = self.follower_palette_slot()
+        species = self.mon(0)["species"]
+        self.record("story opening", scene == 4 and slot is not None and species == SPECIES["BULBASAUR"],
+                    f"lab scene var {scene}, starter species {species}, follower palette slot {slot}")
+
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
@@ -482,6 +524,7 @@ def main():
                    name="basic")
         f.check_header()
         f.check_text_speed_default()
+        f.check_options_instant()
         f.check_follower()
         f.check_repel_prompt()
         f.new_game(mons=[(SPECIES["PIKACHU"], 100), (SPECIES["BULBASAUR"], 1)],
@@ -516,6 +559,8 @@ def main():
         f.new_game(mons=[(SPECIES["ONIX"], 20)], items=[(ITEM_METAL_COAT, 1)], flags=[FLAG_SYS_POKEMON_GET],
                    name="coat")
         f.check_trade_item_as_stone()
+        f.new_game(name="story")
+        f.check_story_opening()
     finally:
         import emu
         emu.stop()
