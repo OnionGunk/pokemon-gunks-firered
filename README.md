@@ -17,7 +17,9 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
 - **Pokémon:** IV and EV view in the summary (A on the SKILLS page), Exp. All (half the EXP and the EVs for the
   Pokémon that didn't battle), vitamins up to 252 EVs, and trade evolutions without trading. HM moves work without
   teaching the move, and every PC has a free Move Tutor that remembers and forgets moves.
-- **16 PC boxes** instead of 14. A save from vanilla FireRed loads, with its boxes kept.
+- **16 PC boxes** instead of 14.
+- **Quick Run and Quick Ball:** in battle, R runs and L throws your last-used ball (hold L and press Left/Right
+  to pick another). A small icon shows which ball and how many are left. A save from vanilla FireRed loads, with its boxes kept.
 - **Save safety:** an extra check when loading, so a save slot can only load if all of it comes from one save.
 
 Professor Oak gives the Endless Repel, the Exp. All and the DexNav with the Pokédex, when you bring him his
@@ -70,6 +72,7 @@ and `docs/GUNK_CHANGES.md` lists every change with how it was tested.
 - The DexNav idea comes from later Pokémon games and fan hacks; ghoulslash's DexNav for
   [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion) was the reference for its design.
 - The Repel prompt follows the one in [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion).
+- Quick Ball follows pokeemerald-expansion's `B_LAST_USED_BALL` and `B_LAST_USED_BALL_CYCLE`.
 - [MinimalEffort07/pokefirered](https://github.com/MinimalEffort07/pokefirered): the follower's movement (walkable
   tiles, catching up, swapping places, making way at ledges and shores) is ported from its Walk With Pokémon
   feature, and it showed that FireRed's unused shaking-grass field effect and SaveBlock1's unused bytes are free.

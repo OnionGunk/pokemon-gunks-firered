@@ -248,7 +248,7 @@ class Features:
         search = g.a("sSearch")
         raw = bytes.fromhex(g.cmd(f"read {search} 12")[0].replace(" ", ""))
         species, sx, sy = struct.unpack_from("<Hhh", raw, 0)
-        active = raw[10]
+        active = raw[11]  # struct DexNavSearch.active (after the u16 framesLeft and spriteId)
         g.cmd("press A 4", "wait 30", "press A 4", "wait 30")
         self.shot("dexnav_patch.png")
         self.walk_to(sx - 7, sy - 7)
