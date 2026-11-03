@@ -37,6 +37,21 @@ already past that ("Pewter aide gives the key items", "Mom gives the key items")
 playing when the sweep stops pressing A (the Hall of Fame saving, Bill on One Island, the Two Island Game Corner).
 The game keeps running in all of them. The first sweep found the cave hang fixed in "Fix a hang loading caves".
 
+## Whole-game checks
+
+- **Story triggers** (`emu/suite/story.py`): all 256 var-gated triggers and on-arrival map scripts, played on Gunk's
+  and on vanilla from the same setup. 149 scenes finish on both and none ends with other vars, flags, map or
+  party than vanilla's; 0 fail. 5 don't finish in vanilla either (the League and credits scenes, longer than the
+  sweep's press limit, and the Marowak ghost, which needs the Silph Scope).
+- **Milestones** (`emu/suite/milestones.py`): the eight gym leaders, the S.S. Anne captain, Snorlax with the Poké
+  Flute, and the Champion through the Hall of Fame, its save, the credits and CONTINUE. All 11 match vanilla, and
+  on Gunk's each survives a save, power cycle and CONTINUE (with "previously on your quest") with the follower in
+  color.
+- **Legality** (`emu/suite/legality.py` + PKHeX.Core 26.10.18): 27 Pokémon caught in the emulator on Route 1,
+  Route 2 and Viridian Forest: 12 random encounters, 6 DexNav, 8 chain searches (21 rolls, best kept) and a shiny
+  from a chain search. All legal (Method 1, 2 or 4 grass encounters, met data, ball and OT from the normal catch),
+  and their copies through the 16-box packing are byte-identical and legal: 54/54.
+
 ## Not done yet
 
 - Talking to the follower does nothing (vanilla would read a garbage script; it is skipped).
