@@ -2111,6 +2111,9 @@ static u8 LoadGunkFollowerPalette(void)
     paletteNum = LoadSpritePalette(&palette);
     if (paletteNum == 0xFF)
         return PALSLOT_NPC_1;
+    // during quest-log playback the tint code keeps a copy of each loaded palette and restores from it afterwards;
+    // without this the follower's slot comes back from that (zeroed) copy, all black
+    ApplyGlobalFieldPaletteTint(paletteNum);
     UpdateSpritePaletteWithWeather(paletteNum);
     return paletteNum;
 }
