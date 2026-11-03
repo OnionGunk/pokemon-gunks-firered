@@ -20,8 +20,8 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
 - **16 PC boxes** instead of 14. A save from vanilla FireRed loads, with its boxes kept.
 - **Save safety:** an extra check when loading, so a save slot can only load if all of it comes from one save.
 
-Oak's aide gives the Endless Repel, the Exp. All and the DexNav along with the Running Shoes in Pewter City. On a
-save that is already past Pewter, Mom has them.
+Professor Oak gives the Endless Repel, the Exp. All and the DexNav with the Pokédex, when you bring him his
+parcel: before the first gym. On a save that is already past that, Mom has them.
 
 Save safety comes first: every build passes an emulator test suite that covers save cycles, power cuts at points
 across the flash write, torn writes at every sector, and recovery from a damaged save slot.

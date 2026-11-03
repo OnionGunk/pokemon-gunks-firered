@@ -20,8 +20,8 @@ difficulty kept as they are.
   evolutions without trading, HM moves without teaching them, and a free Move Tutor on every Pokémon Center PC.
 - **Save safety**: a save slot only loads if all of it comes from one save.
 
-Oak's aide gives the Endless Repel, the Exp. All and the DexNav with the Running Shoes in Pewter City. On a save
-that is already past Pewter, Mom has them.
+Professor Oak gives the Endless Repel, the Exp. All and the DexNav with the Pokédex, when you bring him his
+parcel: before the first gym. On a save that is already past that, Mom has them.
 
 ## Patch it
 
