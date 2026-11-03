@@ -17,6 +17,7 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
 - **Pokémon:** IV and EV view in the summary (A on the SKILLS page), Exp. All (half the EXP and the EVs for the
   Pokémon that didn't battle), vitamins up to 252 EVs, and trade evolutions without trading. HM moves work without
   teaching the move, and every PC has a free Move Tutor that remembers and forgets moves.
+- **16 PC boxes** instead of 14. A save from vanilla FireRed loads, with its boxes kept.
 - **Save safety:** an extra check when loading, so a save slot can only load if all of it comes from one save.
 
 Oak's aide gives the Endless Repel, the Exp. All and the DexNav along with the Running Shoes in Pewter City. On a
