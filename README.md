@@ -46,12 +46,16 @@ sha1: 41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc
 ```
 
 1. Download the `.bps` file from [Releases](../../releases).
-2. Apply it to your ROM with [Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/) (in the browser),
-   Floating IPS, or `py tools/patch/bps.py apply <firered.gba> <patch.bps> <out.gba>`.
-3. Play the result in any GBA emulator or flashcart. The patcher checks your ROM first and refuses the wrong one.
+2. Apply it to your clean ROM with [Rom Patcher JS](https://www.marcrobledo.com/RomPatcher.js/) (in the browser),
+   Floating IPS, or `py tools/patch/bps.py apply <firered.gba> <patch.bps> <out.gba>`. The patcher checks your ROM
+   first and refuses any other one, including an already patched ROM: always patch the clean retail ROM.
+3. Check the result against the patched sha1 in the release notes, then play it in any GBA emulator or flashcart.
+   Keep the save type at 128 KB flash (emulators pick it from the game code, which stays FireRed's).
 
 Saves carry over between releases unless the release notes say otherwise. Back up your save before updating.
-A vanilla FireRed save loads in Gunk's FireRed.
+A vanilla FireRed save loads in Gunk's FireRed: its 14 boxes are converted to the 16-box format the first time it
+loads (names and wallpapers kept, boxes 15 and 16 empty). After you save in Gunk's FireRed, that save no longer
+loads in vanilla FireRed.
 
 ## Build it
 
