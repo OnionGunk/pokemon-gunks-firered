@@ -1,7 +1,3 @@
-<!-- DRAFT, not published. The patched sha1 below is for the build before the new title logo; rebuild the
-patch and update it once the logo is in. Release title: Pokémon Gunk's FireRed Version v1.0
-Asset: pokemon-gunks-firered-v1.0.bps -->
-
 First release of Pokémon Gunk's FireRed Version: FireRed with the grind and friction taken out, the story and
 difficulty kept as they are.
 
@@ -36,7 +32,7 @@ IPS, or `py tools/patch/bps.py apply`. Patch the clean retail ROM. The patcher r
 ROM should be:
 
 ```
-sha1: 00e9b4a7ea0185b56935f07a06ce07834192a195
+sha1: dc08dd0551dd92ddd2e962cc08d79aff108e5cc4
 ```
 
 ## Notes

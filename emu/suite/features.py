@@ -609,7 +609,7 @@ class Features:
                     f"Endless Repel, Exp. All, DexNav {items}, Running Shoes {self.flag(FLAG_SYS_B_DASH)}")
 
     def check_mom_gift(self):
-        """A save past Pewter without the key items (made before Gunk's): Mom heals, then gives them."""
+        """A save past the Pokedex without the key items (made before Gunk's): Mom heals, then gives them."""
         g = self.g
         g.cmd("press Up 2", "wait 20", "press A 4", "wait 40")
         g.wait_field(press="A", max_steps=600, settle=4)
@@ -788,7 +788,8 @@ def main():
         f.clear_flag(0x092)
         f.warp(3, 2, 45, 22, name="pewter_warp")
         f.check_pewter_aide_gift()
-        f.new_game(mons=[(SPECIES["BULBASAUR"], 12)], flags=[FLAG_SYS_POKEMON_GET, FLAG_SYS_B_DASH, 0x258], name="mom")
+        f.new_game(mons=[(SPECIES["BULBASAUR"], 12)], flags=[FLAG_SYS_POKEMON_GET, FLAG_SYS_POKEDEX_GET, FLAG_SYS_B_DASH, 0x258],
+                   name="mom")  # a save past Pewter has the Pokedex, which Mom's gift now checks
         f.warp(4, 0, 8, 5, name="mom_warp")
         f.check_mom_gift()
         f.new_game(mons=[(SPECIES_LAPRAS, 30)], items=[(ITEM_HM03, 1)],
