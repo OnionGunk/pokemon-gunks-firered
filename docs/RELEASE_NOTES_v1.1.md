@@ -16,6 +16,7 @@ Quick Run, Quick Ball and a reworked DexNav for Pokémon Gunk's FireRed Version.
 - The patch keeps shaking, twice a second, until you reach it or it gets away.
 - The chain: a wild encounter with a different species resets it, one with the same species keeps it, and running
   from a DexNav battle no longer breaks it.
+- With a high search level and a long chain, stepping onto the patch no longer freezes the game for half a second.
 
 ## Patch it
 
@@ -30,7 +31,7 @@ IPS, or `py tools/patch/bps.py apply`. Patch the clean retail ROM, not your v1.0
 ROM. The patched ROM should be:
 
 ```
-sha1: b852a9774ac46bb0e08051a5c144d437a2de76fd
+sha1: 44c2a5939b59cb93300d928edc4989e9ba413665
 ```
 
 ## Notes
