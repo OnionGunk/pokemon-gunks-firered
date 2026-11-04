@@ -1,6 +1,3 @@
-<!-- DRAFT, not published: waits for the user's yes. Release title: Pokémon Gunk's FireRed Version v1.2
-Asset: pokemon-gunks-firered-v1.2.bps. Covers everything since v1.0 (v1.1 was never released on its own). -->
-
 Talk to your follower, Quick Run, Quick Ball and a reworked DexNav for Pokémon Gunk's FireRed Version.
 
 ## New
