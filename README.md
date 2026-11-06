@@ -5,9 +5,19 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
 
 ## Features
 
-- **DexNav.** A key item that lists the grass Pokémon of the place you're in: seen ones by name, unseen ones as
-  dashes. Pick one and it hides in a patch of rustling grass nearby; step in to battle it. Every Pokémon it finds
-  is a legal wild roll for that spot. Search levels and chains raise the odds of good IVs and shinies.
+- **DexNav.** A key item (use it from the Bag or register it to SELECT) that opens the DexNav screen for the place
+  you're in:
+  - a title bar with the area's name and how many of its Pokémon you've caught;
+  - LAND and WATER tabs (switch with L/R), each a grid of the area's grass or surfing Pokémon: an icon once seen,
+    "?" before that, a ball mark once caught;
+  - an info panel for the highlighted Pokémon: name and status, where it's found, its level range, search level
+    and chain.
+
+  Pick a Pokémon you've seen and it hides nearby, in a patch of rustling grass or rippling water. Step (or Surf)
+  into the patch within 10 seconds to battle it. While you look, a bar at the top of the screen shows what's
+  hiding: name, level, a shiny mark, nature, ability and a gold star for each perfect IV. Every Pokémon it finds
+  is a legal wild roll for that spot. Search levels and chains raise the odds of good IVs and shinies. A GBA has
+  one screen, so there's no second-screen DexNav view.
 - **Pokémon follow you.** Your lead Pokémon walks behind you, any of the 386 species, shinies in their shiny
   colors. Walk into it to swap places; it waits on the shore while you Surf and hops down ledges after you.
   RETURN in its party menu puts it away, WALK brings it back.
