@@ -1,11 +1,16 @@
-"""DexNav and the Safari Zone: py -3 emu/suite/dexnav_safari.py <rom.gba> <rom.elf>
+"""The DexNav refuses the Safari Zone: py -3 emu/suite/dexnav_safari.py <rom.gba> <rom.elf>
 
-A DexNav battle in the Safari Zone would be an ordinary wild battle with the player's own balls, a catch no real
-game can make there (the Safari Zone's met location with another ball). The DexNav refuses twice:
-- the list is empty there (Gunk_DexNavPrepareList checks GetSafariZoneFlag), so SELECT gives the "no Pokemon"
-  message, the DexNav screen never opens and no search starts;
-- a search already running (written into sSearch for this check, on the tile ahead) is ended instead of battled
-  when the player steps onto it (Gunk_DexNavTryStartBattle checks GetSafariZoneFlag too).
+The Safari Zone's Pokemon are caught with Safari Balls only. A DexNav battle there would be a normal battle with
+normal balls, and its catches illegal (a Safari Zone met location with any ball), so the DexNav refuses it
+at the item (src/item_use.c, FieldUseFunc_DexNav: Oak's "This isn't the time to use that!", as for other items in
+the Safari Zone; the Bag and SELECT both use it), and again in src/gunk_dexnav.c (Gunk_DexNavPrepareList,
+Gunk_DexNavStartSearch, Gunk_DexNavTryStartBattle) should anything else start it. In the Safari Zone's center,
+standing still:
+- in Safari mode (FLAG_SYS_SAFARI_MODE, with steps left), SELECT (the registered DexNav) gets Oak's refusal, the
+  DexNav's script never runs (Gunk_DexNavPrepareList never called), the screen never opens and no search starts;
+- the control: the same spot out of Safari mode, the screen opens with the area's Pokemon;
+- back in Safari mode, a search written in on the tile ahead (as if one had got there anyway) ends when the player
+  steps on it, with no DexNav battle (Gunk_DexNavTryStartBattle).
 Every wait is bounded. Results: emu/suite/out/<rom>/features/dexnav_safari.txt.
 """
 import os
@@ -14,57 +19,85 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from features import (FLAG_SYS_POKEDEX_GET, FLAG_SYS_POKEMON_GET, ITEM, SB1_REGISTERED_ITEM, SPECIES,  # noqa: E402
-                      Features)
+from dexnav_screen import Screen  # noqa: E402
+from features import FLAG_SYS_POKEDEX_GET, FLAG_SYS_POKEMON_GET, ITEM, SB1_REGISTERED_ITEM, SPECIES  # noqa: E402
 
 MAP_SAFARI_ZONE_CENTER = (1, 63)
-INSIDE = (26, 29)  # just inside the entrance
+STAND = (26, 29)  # just inside the entrance
 FLAG_SYS_SAFARI_MODE = 0x800
-FLAG_GUNK_ENDLESS_REPEL_ON = 0x4A7
+SPECIES_NIDORAN_F = 29  # one of the center's grass Pokemon, seen so the screen has something to show
+SPECIES_VENONAT = 48  # in the center's grass in both games: the written-in search's Pokemon
 MAP_OFFSET = 7  # sSearch keeps the map's own coordinates, which start 7 tiles in
-SPECIES_VENONAT = 48  # in the Safari Zone center's grass in both games
 MAX_SPRITES = 64
+
+
+class Safari(Screen):
+    def watch(self):
+        """Count calls to the item's refusal and to the DexNav script's first special from now."""
+        g = self.g
+        g.cmd("lua NT = 0 PL = 0 local reg = event.on_bus_exec or event.onmemoryexecute "
+              f"reg(function() NT = NT + 1 end, {g.a('PrintNotTheTimeToUseThat') & ~1}, 'gunk_nt') "
+              f"reg(function() PL = PL + 1 end, {g.a('Gunk_DexNavPrepareList') & ~1}, 'gunk_pl') return 1")
+
+    def calls(self):
+        nt, pl = self.g.cmd("lua return NT .. ',' .. PL")[0][4:].split(",")
+        return int(nt), int(pl)
 
 
 def main():
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
-    t = Features(rom, elf)
+    t = Safari(rom, elf)
     g = t.g
     t0 = time.time()
     import emu
     try:
-        t.new_game(mons=[(SPECIES["PIKACHU"], 100)], items=[(ITEM["DEXNAV"], 1)],
-                   flags=[FLAG_SYS_POKEMON_GET, FLAG_SYS_POKEDEX_GET, FLAG_GUNK_ENDLESS_REPEL_ON], name="safari")
-        t.warp(*MAP_SAFARI_ZONE_CENTER, *INSIDE, name="safari_center")
+        t.new_game(mons=[(SPECIES["PIKACHU"], 50)], items=[(ITEM["DEXNAV"], 1)],
+                   flags=[FLAG_SYS_POKEMON_GET, FLAG_SYS_POKEDEX_GET], name="safari")
+        t.warp(*MAP_SAFARI_ZONE_CENTER, *STAND, name="safari_center")
         g.wait_field(press="B", max_steps=60)
-        t.set_flag(FLAG_SYS_SAFARI_MODE)  # after the warp: Continue starts a game out of Safari mode
-        t.seen_all()
+        t.set_dex(SPECIES_NIDORAN_F, False)
         g.cmd(f"write16 {t.sb1() + SB1_REGISTERED_ITEM} {ITEM['DEXNAV']}")
+        # Safari mode, as the entrance sets it (set after the warp: Continue would end it), with steps left
+        t.set_flag(FLAG_SYS_SAFARI_MODE)
+        g.cmd(f"write16 {g.a('gSafariZoneStepCounter')} 500")
 
-        # SELECT: no list, no screen, no search
+        t.watch()
         g.cmd("press Select 4")
         opened = False
-        for _ in range(30):
+        for _ in range(40):
             g.cmd("wait 6")
-            if (g.u32(g.a("gMain") + 4) & ~1) == g.a("CB2_DexNavScreen"):
+            if t.callback2() == g.a("CB2_DexNavScreen"):
                 opened = True
-        t.shot("dexnav_safari_message.png")
-        back = g.wait_field(press="B", max_steps=40)
-        search = g.a("sSearch")
-        listed, active = g.u8(g.a("sListCount")), g.u8(search + 11)
-        t.record("no DexNav list or search in the Safari Zone", not opened and listed == 0 and active == 0 and back,
-                 f"screen opened {opened}, list {listed}, search active {active}, field {back}")
+        t.shot("safari_refused.png")
+        refused, ran = t.calls()
+        search = t.search()
+        g.wait_field(press="B", max_steps=30)
+        t.record("in Safari mode the DexNav refuses at the item (Oak's line), its script never runs",
+                 refused == 1 and ran == 0 and not opened and not search["active"] and t.flag(FLAG_SYS_SAFARI_MODE),
+                 f"refusals {refused}, DexNav script runs {ran}, screen opened {opened}, "
+                 f"search active {search['active']}, player {t.pos()}")
 
-        # a search on the tile ahead (as if one had started), then a step onto it: ended, no battle. The Endless
-        # Repel goes off first: with it, a Lv. 100 lead keeps the search's Pokemon away before the Safari check
-        # is reached. A DexNav battle sets sSearch.inBattle; a random Safari encounter doesn't
-        t.clear_flag(FLAG_GUNK_ENDLESS_REPEL_ON)
+        # the control: out of Safari mode, the same spot lists the center's Pokemon
+        t.clear_flag(FLAG_SYS_SAFARI_MODE)
+        screen = t.open_screen("safari_control.png")
+        count = screen["count"] if screen else 0
+        refused, ran = t.calls()
+        g.cmd("press B 4")
+        t.back_in_field()
+        t.record("the control: out of Safari mode the screen opens with the area's Pokemon",
+                 bool(screen) and count > 0 and ran >= 1, f"screen {bool(screen)}, {count} Pokemon listed, "
+                 f"DexNav script runs {ran}")
+
+        # back in Safari mode: a search on the tile ahead, then a step onto it. A DexNav battle would set
+        # sSearch.inBattle (a random Safari encounter doesn't); it must end instead
+        t.set_flag(FLAG_SYS_SAFARI_MODE)
+        g.cmd(f"write16 {g.a('gSafariZoneStepCounter')} 500")
+        s = g.a("sSearch")
         x, y = t.pos()
-        g.cmd(f"write16 {search} {SPECIES_VENONAT}", f"write16 {search + 2} {x + MAP_OFFSET}",
-              f"write16 {search + 4} {y - 1 + MAP_OFFSET}", f"write8 {search + 6} {MAP_SAFARI_ZONE_CENTER[0]}",
-              f"write8 {search + 7} {MAP_SAFARI_ZONE_CENTER[1]}", f"write16 {search + 8} 600",
-              f"write8 {search + 10} {MAX_SPRITES}", f"write8 {search + 12} 0", f"write8 {search + 14} 0",
-              f"write8 {search + 11} 1")
+        g.cmd(f"write16 {s} {SPECIES_VENONAT}", f"write16 {s + 2} {x + MAP_OFFSET}", f"write16 {s + 4} {y - 1 + MAP_OFFSET}",
+              f"write8 {s + 6} {MAP_SAFARI_ZONE_CENTER[0]}", f"write8 {s + 7} {MAP_SAFARI_ZONE_CENTER[1]}",
+              f"write16 {s + 8} 600", f"write8 {s + 10} {MAX_SPRITES}", f"write8 {s + 12} 0", f"write8 {s + 14} 0",
+              f"write8 {s + 11} 1")
         for _ in range(4):
             if t.pos() == (x, y - 1):
                 break
@@ -72,17 +105,19 @@ def main():
         dexnav_battle = False
         for _ in range(20):
             g.cmd("wait 10")
-            dexnav_battle = dexnav_battle or g.u8(search + 12) == 1
+            dexnav_battle = dexnav_battle or g.u8(s + 12) == 1
         t.record("a search running in the Safari Zone ends instead of battling", t.pos() == (x, y - 1)
-                 and not dexnav_battle and g.u8(search + 11) == 0,
-                 f"stepped to {t.pos()} (patch {(x, y - 1)}), DexNav battle {dexnav_battle}, "
-                 f"search active {g.u8(search + 11)}")
+                 and not dexnav_battle and g.u8(s + 11) == 0,
+                 f"stepped to {t.pos()} (patch {(x, y - 1)}), DexNav battle {dexnav_battle}, search active {g.u8(s + 11)}")
     except RuntimeError as e:
         t.record("stall", False, str(e))
     finally:
         emu.stop()
     failed = [r for r in t.results if not r[1]]
     print(f"{len(t.results) - len(failed)}/{len(t.results)} passed in {time.time() - t0:.0f}s")
+    with open(os.path.join(t.out, "dexnav_safari.txt"), "w") as f:
+        for check, ok, detail in t.results:
+            f.write(("PASS " if ok else "FAIL ") + check + ": " + detail + "\n")
     sys.exit(1 if failed else 0)
 
 
