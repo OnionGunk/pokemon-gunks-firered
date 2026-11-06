@@ -1,5 +1,6 @@
 <!-- DRAFT, not published: waits for the user's yes. Release title: Pokémon Gunk's FireRed Version v1.3
-Asset: pokemon-gunks-firered-v1.3.bps. The patched sha1 and the test counts get filled in from the final build. -->
+Asset: pokemon-gunks-firered-v1.3.bps (sha1 ff12eed955bf86e3ac4ef84de6d9f6fe2675cd1d), made from the release build
+of e412fd4ad. -->
 
 A real DexNav screen, Surf searches and a search bar for Pokémon Gunk's FireRed Version.
 
@@ -26,6 +27,10 @@ A real DexNav screen, Surf searches and a search bar for Pokémon Gunk's FireRed
 - **Held items from searches.** A searched Pokémon can hold its species' own wild items, and the odds grow with
   the search level and chain: from 50% and 5% (the usual odds) up to 75% for the common item and 20% for the rare
   one.
+- **Held items with Compound Eyes.** With a Compound Eyes Pokémon in the lead, a searched Pokémon's item odds start
+  at 60% and 20% and go up to 85% and 30%.
+- **No DexNav in the Safari Zone.** The DexNav says it isn't the time to use it there, so every Safari catch stays
+  a Safari Ball catch.
 - **Follower reactions.** Talk to your follower and it reacts by mood, with an emote, its cry or both; a note
   shows when it's steady and dots when it's tired. It goes back into its ball while you surf and during story
   scenes, and comes out again after.
@@ -53,5 +58,5 @@ IPS, or `py tools/patch/bps.py apply`. Patch the clean retail ROM. The patcher r
 ROM should be:
 
 ```
-sha1: (filled in from the final build)
+sha1: 684eb3bd7e25bcd6763d44543306be79b724a9db
 ```
