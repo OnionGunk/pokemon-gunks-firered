@@ -682,6 +682,8 @@ class Features:
         """Walk north out of Pallet Town into Route 1: the follower crosses the map edge behind the player."""
         g = self.g
         self.set_var(0x4050, 3)  # VAR_MAP_SCENE_PALLET_TOWN_OAK: Oak's Route 1 scene is over
+        # the Endless Repel with a Lv. 30 lead: no wild battle in Route 1's grass to hold up the save check after this
+        self.set_flag(FLAG_GUNK_ENDLESS_REPEL_ON)
         self.walk_to(12, 2)
         for _ in range(8):
             g.cmd("press Up 16", "wait 10")
