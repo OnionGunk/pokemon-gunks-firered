@@ -58,8 +58,9 @@ exact release, or turn the companion off; a mismatched build could crash the gam
 
 ## Build it
 
-Follow pret's [`INSTALL.md`](INSTALL.md), then run `make`. A clean build reproduces the release ROM, and
-`tools/patch/bps.py make` makes the patch from it. [`docs/ENGINE.md`](docs/ENGINE.md) says why this hack uses the
+Follow pret's [`INSTALL.md`](INSTALL.md), then run `make firered_release` for the release ROM
+(`pokefirered_release.gba`, which `tools/patch/bps.py make` makes the patch from). `make firered` builds the test ROM
+the emulator suite uses: the same game plus a test hook that sets up new games. [`docs/ENGINE.md`](docs/ENGINE.md) says why this hack uses the
 decompilation.
 
 ## Credits
