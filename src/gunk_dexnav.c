@@ -593,6 +593,12 @@ bool8 Gunk_DexNavTryStartBattle(void)
 
     if (!sSearch.active || sSearch.inBattle || !IsOnSearchMap())
         return FALSE;
+    // never in the Safari Zone (the list is empty there too): a Safari battle has its own balls and rules
+    if (GetSafariZoneFlag())
+    {
+        EndSearch();
+        return FALSE;
+    }
 
     PlayerGetDestCoords(&x, &y);
     if (x != sSearch.x || y != sSearch.y)
