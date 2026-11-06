@@ -22,7 +22,7 @@ enum {
     DXCOL_TAB_OFF_TEXT,
 };
 
-#if GAME_VERSION == VERSION_LEAFGREEN
+#ifdef LEAFGREEN
 // LeafGreen: leaf greens and a pale meadow backdrop
 static const u16 sDexNavSkinPalette[16] =
 {
