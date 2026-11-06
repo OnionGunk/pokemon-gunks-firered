@@ -15,6 +15,9 @@ A real DexNav screen, Surf searches and a search bar for Pokémon Gunk's FireRed
 
   Pick a grass or water Pokémon you've seen to search for it. You can't search for one you haven't seen yet, and
   the OTHER tab is for reference: it tells you which rod or Rock Smash finds each one.
+- **The area page.** Press START on the DexNav screen for the area at a glance: the chance a step in the grass or
+  on the water (or a smashed rock) finds a Pokémon and the levels for each, the levels on each rod, where the
+  roaming legendary is now, and the lowest level your Repel lets through. START or B goes back.
 - **Surf searches.** Water Pokémon hide in a patch of rippling water nearby. Surf onto it within 10 seconds to
   battle it.
 - **The search bar.** While a search runs, a bar across the top of the screen shows the Pokémon that's hiding:
