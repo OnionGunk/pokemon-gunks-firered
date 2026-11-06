@@ -37,6 +37,8 @@ A real DexNav screen, Surf searches and a search bar for Pokémon Gunk's FireRed
   the same: search levels and chains add rolls, and the best one is kept, a shiny first.
 - In this hack, L/R open the DexNav screen's tabs, so FireRed's L/R Help is off while the screen is open.
 - A GBA has one screen, so there's no second-screen DexNav view.
+- The patch is made from the release build (`make firered_release`), which leaves out the emulator suite's test
+  hook. A smoke test plays the release ROM itself from power-on through the intro, a new game, a save and CONTINUE.
 
 ## Patch it
 
