@@ -1,7 +1,3 @@
-<!-- DRAFT, not published: waits for the user's yes. Release title: Pokémon Gunk's FireRed Version v1.3
-Asset: pokemon-gunks-firered-v1.3.bps (sha1 ff12eed955bf86e3ac4ef84de6d9f6fe2675cd1d), made from the release build
-of e412fd4ad. -->
-
 A real DexNav screen, Surf searches and a search bar for Pokémon Gunk's FireRed Version.
 
 ## New
