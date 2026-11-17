@@ -23,6 +23,19 @@ DexNav searches in caves and buildings for Pokémon Gunk's FireRed Version.
   rival, the parcel, every leader, the Elite Four and the Champion), using the DexNav, Quick Ball, Quick Run and
   the follower on the way. Another checks the DexNav on every wild map.
 
+## Tested
+
+On the v1.4 test build (the release game plus a test hook):
+
+- The playthrough from New Game to the Hall of Fame: 43/43 checks.
+- The DexNav on every wild map: 267/267 (the list matches the map's table, and a land or water search starts).
+- DexNav catches checked in PKHeX: 72 land, 82 Unown (Tanoby, wild and DexNav) and 16 water, all legal.
+- The emulator suite: save cycles and power cuts 35/35, features 33/33, Quick Ball 10/10 and on later turns 6/6,
+  DexNav screen 16/16, items 4/4, Safari 3/3, the peek bar 12/12, rules 6/6, boxes 16/16, menus 9/9, followers
+  16/16, story milestones against vanilla 11/11, and the story sweep the same as vanilla. The talk sweep differs from
+  vanilla in one place, as in v1.2 and v1.3: the Dunsparce Tunnel prospector, whom the vanilla run skips.
+- A DexNav search costs at most 5 frames.
+
 ## Patch it
 
 You need your own dump of **Pokémon FireRed (USA) 1.0**:
