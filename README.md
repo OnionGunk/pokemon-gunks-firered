@@ -8,8 +8,8 @@ It keeps the game's difficulty and story as they are and takes the grind and fri
 - **DexNav.** Professor Oak gives it to you with the Pokédex. Use it from the Bag (or register it to SELECT) and
   its screen shows the area's Pokémon on LAND, WATER and OTHER tabs (switch with L/R): an icon once seen, "?"
   before that, a ball mark once caught, and for the highlighted one how it's found, its levels, search level and
-  chain. Pick a grass or water Pokémon you've seen and it hides nearby in rustling grass or rippling water; step or
-  Surf into the patch within 10 seconds to battle it. While you look, a bar at the top shows what's hiding: level,
+  chain. Pick a land or water Pokémon you've seen and it hides nearby in rustling grass, a puff of dust (in caves and
+  buildings) or rippling water; step or Surf into the patch within 10 seconds to battle it. While you look, a bar at the top shows what's hiding: level,
   shiny, nature, ability, perfect IVs and held item. Searches roll legal wild encounters, and search levels and
   chains raise the odds of good IVs, shinies and held items. OTHER lists the area's fishing and Rock Smash
   Pokémon by rod.
