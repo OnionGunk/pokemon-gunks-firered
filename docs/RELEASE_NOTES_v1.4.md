@@ -1,5 +1,6 @@
 <!-- DRAFT, not published: waits for the user's yes. Release title: Pokémon Gunk's FireRed Version v1.4
-Asset: pokemon-gunks-firered-v1.4.bps. The patched sha1 and the test counts get filled in from the final build. -->
+Asset: pokemon-gunks-firered-v1.4.bps (sha1 94e76370b373fe8f9b169018e70be3afbaa1d23e), from the release build of
+14a794b6f. -->
 
 DexNav searches in caves and buildings for Pokémon Gunk's FireRed Version.
 
@@ -35,5 +36,5 @@ IPS, or `py tools/patch/bps.py apply`. Patch the clean retail ROM. The patcher r
 ROM should be:
 
 ```
-sha1: (filled in from the final build)
+sha1: af5a08659cc4b473ae7d1a321e86487bbc30b679
 ```
