@@ -24,6 +24,8 @@
 #include "constants/species.h"
 #include "constants/items.h"
 #include "constants/abilities.h"
+#include "constants/map_types.h"
+#include "constants/metatile_behaviors.h"
 
 // Gunk's DexNav (key item). Pick one of the area's grass or surfing Pokemon on the DexNav screen
 // (src/gunk_dexnav_screen.c) and it hides nearby, in a patch of rustling grass or of rippling water; step (or surf)
@@ -65,6 +67,7 @@ struct DexNavSearch
     u32 seed; // the RNG state the chosen roll starts from
     struct GunkDexNavRoll roll; // the Pokemon the patch holds (the field search bar shows it)
     u16 heldItem; // what it holds (ChooseHeldItem); SetWildMonHeldItem gives it this instead of its own roll
+    bool8 dust; // a land patch off the grass (a cave or building floor): a puff of dust instead of the rustle
 };
 
 static EWRAM_DATA struct DexNavSearch sSearch = {0};
@@ -162,9 +165,9 @@ static void StopPatchSprite(void)
 {
     struct Sprite *sprite = &gSprites[sSearch.spriteId];
 
-    if (sSearch.area == WILD_AREA_WATER)
+    if (sSearch.area == WILD_AREA_WATER || sSearch.dust)
     {
-        sSearch.spriteId = MAX_SPRITES; // the ripples end by themselves
+        sSearch.spriteId = MAX_SPRITES; // the ripples and the dust end by themselves
         return;
     }
     if (sSearch.spriteId < MAX_SPRITES && sprite->inUse && sprite->data[0] == FLDEFF_UNUSED_GRASS
@@ -177,7 +180,7 @@ static bool8 IsPatchSpriteAlive(void)
 {
     struct Sprite *sprite = &gSprites[sSearch.spriteId];
 
-    if (sSearch.area == WILD_AREA_WATER) // ripples end by themselves: a new one twice a second
+    if (sSearch.area == WILD_AREA_WATER || sSearch.dust) // these end by themselves: a new one twice a second
         return ++sSearch.rippleTimer < PATCH_SHAKE_FRAMES;
 
     return sSearch.spriteId < MAX_SPRITES && sprite->inUse && sprite->data[0] == FLDEFF_UNUSED_GRASS
@@ -196,6 +199,18 @@ static void SpawnPatchSprite(void)
         gFieldEffectArguments[2] = 151; // subpriority, as a surfer's own ripples
         gFieldEffectArguments[3] = 3;
         FieldEffectStart(FLDEFF_RIPPLE);
+        sSearch.spriteId = MAX_SPRITES;
+        sSearch.rippleTimer = 0;
+        return;
+    }
+    if (sSearch.dust)
+    {
+        // the dust a landing kicks up, as a Pokemon scratching at the floor
+        gFieldEffectArguments[0] = sSearch.x;
+        gFieldEffectArguments[1] = sSearch.y;
+        gFieldEffectArguments[2] = gObjectEvents[gPlayerAvatar.objectEventId].previousElevation;
+        gFieldEffectArguments[3] = 2; // OAM priority, as the grass rustle
+        FieldEffectStart(FLDEFF_DUST);
         sSearch.spriteId = MAX_SPRITES;
         sSearch.rippleTimer = 0;
         return;
@@ -234,6 +249,48 @@ static u8 AreaSlotCount(u8 area)
     }
 }
 
+// How this map's land Pokemon are found: in a cave or a building, on the floor; elsewhere, in the grass
+u8 Gunk_DexNavLandMethod(void)
+{
+    switch (gMapHeader.mapType)
+    {
+    case MAP_TYPE_UNDERGROUND: return DEXNAV_METHOD_CAVE;
+    case MAP_TYPE_INDOOR:      return DEXNAV_METHOD_INDOORS;
+    default:                   return DEXNAV_METHOD_GRASS;
+    }
+}
+
+static bool8 IsGrassBehavior(u8 behavior)
+{
+    return MetatileBehavior_IsTallGrass(behavior) || behavior == MB_CYCLING_ROAD_PULL_DOWN_GRASS;
+}
+
+// A land patch's tile: one a wild battle can start on by walking (the game's land encounter tiles: tall grass, the
+// Cycling Road's grass, cave, sand and building floors, Mt. Ember's slopes, which only stop a step north), and not
+// a warp, stairs, thin ice or a ledge's edge
+static bool8 IsLandPatchTile(s16 x, s16 y)
+{
+    u8 behavior = MapGridGetMetatileBehaviorAt(x, y);
+
+    if (MetatileBehavior_IsTallGrass(behavior))
+        return TRUE;
+    if (MapGridGetMetatileAttributeAt(x, y, METATILE_ATTRIBUTE_ENCOUNTER_TYPE) != TILE_ENCOUNTER_LAND)
+        return FALSE;
+    switch (behavior)
+    {
+    case MB_CYCLING_ROAD_PULL_DOWN_GRASS:
+    case MB_NORMAL:
+    case MB_CAVE:
+    case MB_SAND_CAVE:
+    case MB_INDOOR_ENCOUNTER:
+    case MB_MOUNTAIN_TOP:
+    case MB_IMPASSABLE_NORTH:
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
 // How the Pokemon in <area>'s <slot> is found. The fishing table is shared by the rods: slots 0-1 the Old Rod's, 2-4
 // the Good Rod's, 5-9 the Super Rod's (ChooseWildMonIndex_Fishing).
 static u8 SlotMethod(u8 area, u8 slot)
@@ -243,7 +300,7 @@ static u8 SlotMethod(u8 area, u8 slot)
     case WILD_AREA_WATER:   return DEXNAV_METHOD_SURF;
     case WILD_AREA_ROCKS:   return DEXNAV_METHOD_ROCK_SMASH;
     case WILD_AREA_FISHING: return slot < 2 ? DEXNAV_METHOD_OLD_ROD : slot < 5 ? DEXNAV_METHOD_GOOD_ROD : DEXNAV_METHOD_SUPER_ROD;
-    default:                return DEXNAV_METHOD_GRASS;
+    default:                return Gunk_DexNavLandMethod();
     }
 }
 
@@ -484,6 +541,63 @@ const struct GunkDexNavRoll *Gunk_DexNavSearchRoll(u16 *species)
     return &sSearch.roll;
 }
 
+// The DexNav's window: the patch goes at most 6 tiles across and 4 up or down from the player
+#define WINDOW_HALF_W 6
+#define WINDOW_HALF_H 4
+#define WINDOW_W (2 * WINDOW_HALF_W + 1)
+#define WINDOW_H (2 * WINDOW_HALF_H + 1)
+
+// One step on foot from (x, y) to the next tile (nx, ny): no wall, water or ledge there, and no change of height
+// (elevation 0 and 15 join any height, as in the game's own movement check)
+static bool8 CanStepOnFoot(s16 x, s16 y, s16 nx, s16 ny)
+{
+    u8 behavior = MapGridGetMetatileBehaviorAt(nx, ny);
+    u8 from = MapGridGetElevationAt(x, y);
+    u8 to = MapGridGetElevationAt(nx, ny);
+
+    if (MapGridGetCollisionAt(nx, ny) || MetatileBehavior_IsSurfableAndNotWaterfall(behavior)
+     || MetatileBehavior_IsJumpEast(behavior) || MetatileBehavior_IsJumpWest(behavior)
+     || MetatileBehavior_IsJumpNorth(behavior) || MetatileBehavior_IsJumpSouth(behavior))
+        return FALSE;
+    return from == to || from == 0 || from == 15 || to == 0 || to == 15;
+}
+
+// Marks in <walkable> (WINDOW_W x WINDOW_H, the player in the middle) the tiles the player can walk to without
+// leaving the window. A land patch goes only on those: in a cave, never behind a wall it would take the whole
+// search to walk around.
+static void MarkWalkable(s16 px, s16 py, bool8 *walkable)
+{
+    static const s8 sSteps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    u8 queue[WINDOW_W * WINDOW_H];
+    u8 head = 0, tail = 0, i;
+
+    for (i = 0; i < WINDOW_W * WINDOW_H; i++)
+        walkable[i] = FALSE;
+    i = WINDOW_HALF_H * WINDOW_W + WINDOW_HALF_W;
+    walkable[i] = TRUE;
+    queue[tail++] = i;
+    while (head < tail)
+    {
+        u8 cur = queue[head++];
+        s16 cx = cur % WINDOW_W, cy = cur / WINDOW_W;
+        u8 d;
+
+        for (d = 0; d < 4; d++)
+        {
+            s16 nx = cx + sSteps[d][0], ny = cy + sSteps[d][1];
+            u8 next = ny * WINDOW_W + nx;
+
+            if (nx < 0 || nx >= WINDOW_W || ny < 0 || ny >= WINDOW_H || walkable[next])
+                continue;
+            if (!CanStepOnFoot(px + cx - WINDOW_HALF_W, py + cy - WINDOW_HALF_H,
+                               px + nx - WINDOW_HALF_W, py + ny - WINDOW_HALF_H))
+                continue;
+            walkable[next] = TRUE;
+            queue[tail++] = next;
+        }
+    }
+}
+
 // special: VAR_0x8005 = the list row chosen. Places the patch; VAR_RESULT = TRUE if it found grass (or water) for it.
 // STR_VAR_1 = the species' name (or "?????" if unseen), STR_VAR_2 = its search level, VAR_0x8006 = TRUE if it searches the water.
 void Gunk_DexNavStartSearch(void)
@@ -493,6 +607,8 @@ void Gunk_DexNavStartSearch(void)
     s16 candidatesY[(2 * PATCH_MAX_DIST + 1) * (2 * PATCH_MAX_DIST + 1)];
     u16 count = 0, pick;
     u16 species;
+    bool8 walkable[WINDOW_W * WINDOW_H];
+    u8 pass;
 
     gSpecialVar_Result = FALSE;
     if (gSpecialVar_0x8005 >= sListCount || GetSafariZoneFlag())
@@ -511,31 +627,39 @@ void Gunk_DexNavStartSearch(void)
     if (sSearch.active)
         EndSearch();
 
-    // a tall grass (or surfable water) tile in sight, 2 to 5 tiles away, that the player could walk (or surf) onto
+    // a land encounter tile (or surfable water) in sight, 2 to 5 tiles away, that the player could walk (or surf) onto
     PlayerGetDestCoords(&px, &py);
-    for (y = py - PATCH_MAX_DIST; y <= py + PATCH_MAX_DIST; y++)
+    if (!gSpecialVar_0x8006)
+        MarkWalkable(px, py, walkable);
+    // land: first only the tiles the player can walk to; with none of those, any in sight (behind a fence, as on
+    // Route 13's shore, the patch is still there to see)
+    for (pass = 0; pass < 2 && count == 0; pass++)
     {
-        for (x = px - PATCH_MAX_DIST; x <= px + PATCH_MAX_DIST; x++)
+        for (y = py - PATCH_MAX_DIST; y <= py + PATCH_MAX_DIST; y++)
         {
-            s16 dx = x > px ? x - px : px - x;
-            s16 dy = y > py ? y - py : py - y;
+            for (x = px - PATCH_MAX_DIST; x <= px + PATCH_MAX_DIST; x++)
+            {
+                s16 dx = x > px ? x - px : px - x;
+                s16 dy = y > py ? y - py : py - y;
 
-            if (dx + dy < PATCH_MIN_DIST || dx > 6 || dy > 4)
-                continue;
-            if (gSpecialVar_0x8006)
-            {
-                if (!MetatileBehavior_IsSurfableAndNotWaterfall(MapGridGetMetatileBehaviorAt(x, y)))
+                if (dx + dy < PATCH_MIN_DIST || dx > WINDOW_HALF_W || dy > WINDOW_HALF_H)
                     continue;
+                if (gSpecialVar_0x8006)
+                {
+                    if (!MetatileBehavior_IsSurfableAndNotWaterfall(MapGridGetMetatileBehaviorAt(x, y)))
+                        continue;
+                }
+                else if (!IsLandPatchTile(x, y)
+                      || (pass == 0 && !walkable[(y - py + WINDOW_HALF_H) * WINDOW_W + x - px + WINDOW_HALF_W]))
+                {
+                    continue;
+                }
+                if (MapGridGetCollisionAt(x, y) || GetObjectEventIdByXY(x, y) != OBJECT_EVENTS_COUNT)
+                    continue;
+                candidatesX[count] = x;
+                candidatesY[count] = y;
+                count++;
             }
-            else if (!MetatileBehavior_IsTallGrass(MapGridGetMetatileBehaviorAt(x, y)))
-            {
-                continue;
-            }
-            if (MapGridGetCollisionAt(x, y) || GetObjectEventIdByXY(x, y) != OBJECT_EVENTS_COUNT)
-                continue;
-            candidatesX[count] = x;
-            candidatesY[count] = y;
-            count++;
         }
     }
     if (count == 0)
@@ -546,6 +670,7 @@ void Gunk_DexNavStartSearch(void)
     sSearch.area = sListArea[gSpecialVar_0x8005];
     sSearch.x = candidatesX[pick];
     sSearch.y = candidatesY[pick];
+    sSearch.dust = !gSpecialVar_0x8006 && !IsGrassBehavior(MapGridGetMetatileBehaviorAt(sSearch.x, sSearch.y));
     sSearch.mapGroup = gSaveBlock1Ptr->location.mapGroup;
     sSearch.mapNum = gSaveBlock1Ptr->location.mapNum;
     sSearch.framesLeft = SEARCH_FRAMES;
@@ -556,6 +681,8 @@ void Gunk_DexNavStartSearch(void)
     sSearch.heldItem = ChooseHeldItem(species);
     sSearch.active = TRUE;
     SpawnPatchSprite();
+    if (sSearch.dust)
+        gSpecialVar_0x8006 = 2; // the script's "dust" message
     gSpecialVar_Result = TRUE;
 }
 
