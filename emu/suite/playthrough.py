@@ -324,7 +324,7 @@ class Playthrough(Screen):
         g.wait_field(press="B", max_steps=60)
         # a Pokemon Center visit after the last fight: a poisoned lead could faint mid-catch, and B at
         # "Use next Pokemon?" means NO, which runs from the battle
-        self.heal()
+        self.heal_before_catch(folder)
         self.clear_flag(FLAG_GUNK_ENDLESS_REPEL_ON)
         ran = self.wild_battle(spot) and self.quick_run()
         self.record(f"{name}: Quick Run from a wild battle", ran, f"back in the field {ran}")
@@ -359,6 +359,9 @@ class Playthrough(Screen):
                     f"searched species {search['species']} (active {search['active']}) at "
                     f"({search['x']}, {search['y']}), player at {self.pos()}, active on arrival {after['active']}, caught {got}, "
                     f"Poke Balls left {self.bag_count(ITEM_POKE_BALL, SB1_BALLS, BALL_SLOTS)}")
+
+    def heal_before_catch(self, folder):
+        self.heal()
 
     def dex_seen(self, species):
         return self.g.u8(self.sb2() + 0x5C + (species - 1) // 8) >> ((species - 1) % 8) & 1
@@ -552,11 +555,11 @@ class Playthrough(Screen):
             self.end_chapter(name)
 
 
-def main():
+def main(cls=None):
     rom, elf = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
     first = sys.argv[3] if len(sys.argv) > 3 else CHAPTERS[0]
     last = sys.argv[4] if len(sys.argv) > 4 else CHAPTERS[-1]
-    p = Playthrough(rom, elf)
+    p = (cls or Playthrough)(rom, elf)
     t0 = time.time()
     import emu
     todo = CHAPTERS[CHAPTERS.index(first):CHAPTERS.index(last) + 1]
