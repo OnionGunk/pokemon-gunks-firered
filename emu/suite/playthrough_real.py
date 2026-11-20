@@ -484,6 +484,9 @@ class RealTeam(P.Playthrough):
         # no training before the Champion: the team from Lance's room, as a player has it. A loss whites out to the
         # Indigo Plateau's Pokemon Center; then, as a player would, train 4 levels more and walk the Elite Four again.
         self.train = lambda *a: None
+        # the moves league() picks; a run that starts here from an older league.State may hold stale ones
+        self.pick_up_hms("league")
+        self.teach_tms("league")
         orig = self.press_a
         def press_a():
             if self.g.field_ready() and not self.in_battle() and self.at("IndigoPlateau_PokemonCenter_1F"):
