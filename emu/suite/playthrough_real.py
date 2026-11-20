@@ -53,6 +53,7 @@ FOE_TYPES = {"league": [(11, 15), (11, 15), (11, 14), (15, 14), (11, 15),
                         (7, 3), (3, 2), (7, 3), (3, 3), (7, 3),
                         (11, 2), (16, 16), (16, 16), (5, 2), (16, 2),
                         (0, 2), (14, 14), (4, 5), (11, 2), (10, 10), (12, 3)]}
+TYPE_MYSTERY = 9  # types below it are physical, the rest special
 COVER_CAP = 150  # a move past this on one foe counts no more: what matters is a good move for every foe
 TWO_TURN = {13, 19, 63, 76, 91, 130, 143, 291}  # Razor Wind, Fly, Hyper Beam, Solar Beam, Dig, Skull Bash, Sky Attack, Dive
 
@@ -74,7 +75,7 @@ class RealTeam(P.Playthrough):
     def move_data(self, move):
         if move not in self._moves:
             raw = self.read(self.g.a("gBattleMoves") + move * 12, 12)
-            self._moves[move] = {"effect": raw[0], "power": raw[1], "type": raw[2], "acc": raw[3]}
+            self._moves[move] = {"effect": raw[0], "power": raw[1], "type": raw[2], "acc": raw[3], "pp": raw[4]}
         return self._moves[move]
 
     def effectiveness(self, atk, types):
@@ -149,15 +150,29 @@ class RealTeam(P.Playthrough):
             g.cmd("press Down 4", "wait 10")
         g.cmd("press A 4", "wait 30", "press A 4", "wait 60")
 
+    def stat_ratio(self, move, me, foe):
+        """Attack over Defense for a physical move, Sp. Atk over Sp. Def for a special one (in Gen 3 the type
+        decides: Normal to Steel are physical), with stat stages: Earthquake beats Surf on Alakazam."""
+        def stat(b, off, i):
+            v, st = struct.unpack_from("<H", b, off)[0], b[0x18 + i]
+            return v * (2 + st - 6) / 2 if st >= 6 else v * 2 / (2 + 6 - st)
+        if not move:
+            return 1
+        if self.move_data(move)["type"] < TYPE_MYSTERY:
+            return stat(me, 0x02, 1) / max(1, stat(foe, 0x04, 2))
+        return stat(me, 0x08, 4) / max(1, stat(foe, 0x0A, 5))
+
     def best_move(self):
-        """In the move menu, the cursor to the move that does the most damage to the foe (2 x 2 menu)."""
+        """In the move menu, the cursor to the move that does the most damage to the foe (2 x 2 menu), counting
+        both sides' stats."""
         g = self.g
         bm = g.a("gBattleMons")
         me, foe = self.read(bm, 0x58), self.read(bm + 0x58, 0x58)
         moves = struct.unpack_from("<4H", me, 0x0C)
         pp = me[0x24:0x28]
         mine, theirs = (me[0x21], me[0x22]), (foe[0x21], foe[0x22])
-        scores = [self.score(m, mine, theirs, foe[0x20]) if pp[i] else -1 for i, m in enumerate(moves)]
+        scores = [self.score(m, mine, theirs, foe[0x20]) * self.stat_ratio(m, me, foe) if pp[i] else -1
+                  for i, m in enumerate(moves)]
         if max(scores) < 0:
             return  # no PP at all: the game uses Struggle
         k = scores.index(max(scores))
@@ -254,7 +269,9 @@ class RealTeam(P.Playthrough):
         over the foes of the best move's score, each capped at COVER_CAP. On a tie the known moves stay; known moves keep their slots."""
         moves = list(self.party_state(slot)[3])
         pool = sorted({m for m in moves + learnable if m})
-        value = lambda ms: sum(min(COVER_CAP, max(self.score(m, types, f) for m in ms)) for f in foes)
+        # a move with few PP (Hydro Pump's 5) runs dry over a room of 5 or 6 foes who heal: it counts for less
+        lasting = lambda m, f: self.score(m, types, f) * min(1, (self.move_data(m)["pp"] + 5) / 15)
+        value = lambda ms: sum(min(COVER_CAP, max(lasting(m, f) for m in ms)) for f in foes)
         best = max(itertools.combinations(pool, min(4, len(pool))), key=lambda ms: (value(ms), sum(m in moves for m in ms), ms))
         new = [m for m in best if m not in moves]
         for k, m in enumerate(moves):
